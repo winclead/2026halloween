@@ -13,24 +13,18 @@
   <style>
     body { font-family: 'Noto Sans KR', sans-serif; background-color: #040208; color: #f3f4f6; overflow-x: hidden; }
     .font-gothic { font-family: 'Cinzel', serif; }
-    @keyframes alertFlash {
-      0%, 100% { background-color: rgba(220, 38, 38, 0); }
-      50% { background-color: rgba(220, 38, 38, 0.25); }
-    }
-    .anim-alert { animation: alertFlash 1s ease-in-out infinite; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col" id="bodyRoot">
 
   <!-- =========================================================
-       VIEW 1: 📺 거실 TV 메인 디스플레이 (#tv 전용)
+       VIEW 1: 📺 거실 TV 전광판 화면 (#tv)
   ========================================================== -->
   <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-black min-h-screen">
-    
-    <!-- 🟢 [핵심 수정] bg_ambient.webm 비디오 백그라운드 레이어 복원 -->
     <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
       <video id="tvBackgroundVideo" autoplay loop muted playsinline class="w-full h-full object-cover opacity-90">
         <source src="assets/video/bg_ambient.webm" type="video/webm">
+        <source src="video/bg_ambient.webm" type="video/webm">
         브라우저가 비디오 태그를 지원하지 않습니다.
       </video>
       <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 pointer-events-none"></div>
@@ -40,7 +34,7 @@
       <div class="flex items-center gap-3">
         <span class="text-2xl">🕯️</span>
         <div>
-          <div class="text-[10px] text-orange-400 font-bold tracking-widest uppercase" id="tvSubHeaderBadge">LIVING ROOM LOUNGE</div>
+          <div class="text-[10px] text-orange-400 font-bold tracking-widest uppercase">LIVING ROOM LOUNGE</div>
           <h1 class="text-lg md:text-xl font-black text-white" id="tvStageTitleText">평온한 저택</h1>
         </div>
       </div>
@@ -68,7 +62,7 @@
   </main>
 
   <!-- =========================================================
-       VIEW 2: 📱 참가자 스마트폰 화면 (#mobile 전용)
+       VIEW 2: 📱 참가자 스마트폰 화면 (#mobile)
   ========================================================== -->
   <main id="view-mobile" class="hidden flex-1 py-6 px-4 flex justify-center items-start bg-[#06040a]">
     <div class="w-full max-w-md bg-[#130e21] border-2 border-purple-500/40 rounded-3xl overflow-hidden shadow-2xl p-5 space-y-4">
@@ -86,7 +80,7 @@
   </main>
 
   <!-- =========================================================
-       VIEW 3: 🛠️ 호스트 GM 리모컨 (스마트폰 #admin 전용)
+       VIEW 3: 🛠️ 호스트 GM 리모컨 화면 (#admin)
   ========================================================== -->
   <main id="view-admin" class="hidden flex-1 py-4 px-3 flex justify-center items-start bg-[#050308]">
     <div class="w-full max-w-lg bg-[#120d1d] border-2 border-orange-500/50 rounded-3xl p-4 space-y-4 shadow-2xl">
@@ -144,12 +138,15 @@
     let historyStack = [];
     let activeMobileCode = null;
 
+    // Firebase 실시간 리스너 (데이터가 없으면 초기값 자동 세팅)
     db.ref('halloween_state').on('value', (snapshot) => {
       const data = snapshot.val();
       if (data) {
         appData = data;
-        renderAll();
+      } else {
+        db.ref('halloween_state').set(appData);
       }
+      renderAll();
     });
 
     function syncSave() {
@@ -168,7 +165,10 @@
     window.addEventListener('hashchange', routeView);
 
     function switchView(view) {
-      ['tv', 'mobile', 'admin'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+      ['tv', 'mobile', 'admin'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if(el) el.classList.add('hidden');
+      });
       const target = document.getElementById(`view-${view}`);
       if (target) target.classList.remove('hidden');
       renderAll();
@@ -179,13 +179,32 @@
       if (historyStack.length > 20) historyStack.shift();
     }
 
-    function prevStage() { if (appData.state.stageIdx > 0) { saveHistory(); appData.state.stageIdx--; syncSave(); } }
-    function nextStage() { if (appData.state.stageIdx < STAGES.length - 1) { saveHistory(); appData.state.stageIdx++; syncSave(); } }
-    function jumpToStage(idx) { saveHistory(); appData.state.stageIdx = idx; syncSave(); }
+    function prevStage() { 
+      if (appData.state.stageIdx > 0) { 
+        saveHistory(); 
+        appData.state.stageIdx--; 
+        syncSave(); 
+      } 
+    }
+    
+    function nextStage() { 
+      if (appData.state.stageIdx < STAGES.length - 1) { 
+        saveHistory(); 
+        appData.state.stageIdx++; 
+        syncSave(); 
+      } 
+    }
+    
+    function jumpToStage(idx) { 
+      saveHistory(); 
+      appData.state.stageIdx = idx; 
+      syncSave(); 
+    }
 
     function toggleMediaPlay() {
       const vid = document.getElementById('tvBackgroundVideo');
       const btn = document.getElementById('mediaPlayBtn');
+      if (!vid) return;
       if (vid.paused) {
         vid.play();
         btn.innerText = "⏹ STOP";
@@ -196,20 +215,23 @@
     }
 
     function renderTV() {
-      const st = STAGES[appData.state.stageIdx];
+      const st = STAGES[appData.state.stageIdx] || STAGES[0];
       const topHeader = document.getElementById('tvTopHeader');
       const footerBar = document.getElementById('tvFooterBar');
 
       if (st.id === 'STAGE_REST_6PM') {
-        topHeader.style.display = 'none';
-        footerBar.style.display = 'none';
+        if(topHeader) topHeader.style.display = 'none';
+        if(footerBar) footerBar.style.display = 'none';
       } else {
-        topHeader.style.display = 'flex';
-        footerBar.style.display = 'flex';
-        document.getElementById('tvStageTitleText').innerText = st.title;
+        if(topHeader) topHeader.style.display = 'flex';
+        if(footerBar) footerBar.style.display = 'flex';
+        const titleEl = document.getElementById('tvStageTitleText');
+        if(titleEl) titleEl.innerText = st.title;
       }
 
       const box = document.getElementById('tvStageContainer');
+      if(!box) return;
+
       if (st.id === 'STAGE_REST_6PM') {
         box.innerHTML = `<div class="absolute top-4 left-6 text-white/30 text-xs font-bold pointer-events-none">🎶 Ambient Background Playing</div>`;
       } else if (st.id === 'STAGE_STORY_INTRO') {
@@ -235,26 +257,34 @@
       document.getElementById('btnMobileLogout').classList.remove('hidden');
       renderMobileCard();
     }
+    
     function logoutMobile() {
       activeMobileCode = null;
       document.getElementById('mobileLoginBox').classList.remove('hidden');
       document.getElementById('mobileCardContent').classList.add('hidden');
       document.getElementById('btnMobileLogout').classList.add('hidden');
     }
+    
     function renderMobileCard() {
       if (!activeMobileCode) return;
       const c = appData.cards[activeMobileCode];
-      document.getElementById('mobileCardContent').innerHTML = `<div class="bg-purple-950 p-4 rounded-xl text-white font-bold">${c.charIcon} ${c.playerName} (${c.charName})<br><span class="text-xs text-orange-300">${c.secretTitle}</span></div>`;
+      const cardEl = document.getElementById('mobileCardContent');
+      if(cardEl) cardEl.innerHTML = `<div class="bg-purple-950 p-4 rounded-xl text-white font-bold">${c.charIcon} ${c.playerName} (${c.charName})<br><span class="text-xs text-orange-300">${c.secretTitle}</span></div>`;
     }
 
     function renderAdminRemote() {
-      const st = STAGES[appData.state.stageIdx];
-      document.getElementById('remoteCurrentStageLabel').innerText = `현재 화면: ${st.title}`;
-      document.getElementById('remoteStageList').innerHTML = STAGES.map((s, idx) => `
-        <button onclick="jumpToStage(${idx})" class="p-2 rounded border text-left ${idx === appData.state.stageIdx ? 'bg-orange-600 text-white font-black' : 'bg-gray-900 text-gray-300'}">
-          <div class="text-[9px] opacity-75">${s.time}</div><div class="truncate">${s.title}</div>
-        </button>
-      `).join('');
+      const st = STAGES[appData.state.stageIdx] || STAGES[0];
+      const lbl = document.getElementById('remoteCurrentStageLabel');
+      if(lbl) lbl.innerText = `현재 화면: ${st.title}`;
+      
+      const listEl = document.getElementById('remoteStageList');
+      if(listEl) {
+        listEl.innerHTML = STAGES.map((s, idx) => `
+          <button onclick="jumpToStage(${idx})" class="p-2 rounded border text-left ${idx === appData.state.stageIdx ? 'bg-orange-600 text-white font-black' : 'bg-gray-900 text-gray-300'}">
+            <div class="text-[9px] opacity-75">${s.time}</div><div class="truncate">${s.title}</div>
+          </button>
+        `).join('');
+      }
     }
 
     function seedAllDemoPlayers() {
