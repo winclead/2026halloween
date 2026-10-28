@@ -6,13 +6,15 @@
   <title>HALLOWEEN 2026: SURVIVAL GAME SYSTEM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Firebase 실시간 동기화 SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Noto Sans KR', sans-serif; background-color: #040208; color: #f3f4f6; overflow-x: hidden; }
     .font-gothic { font-family: 'Cinzel', serif; }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    .anim-glow { animation: pulseGlow 4s ease-in-out infinite; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col" id="bodyRoot">
@@ -20,19 +22,20 @@
   <!-- =========================================================
        VIEW 1: 📺 거실 TV 전광판 화면 (#tv)
   ========================================================== -->
-  <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-black min-h-screen">
+  <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-[#05020a] min-h-screen">
     
-    <!-- 🟢 비디오 백그라운드 (모든 스테이지에서 항상 최하단에 확실하게 노출) -->
-    <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
-      <video id="tvBackgroundVideo" autoplay loop muted playsinline class="w-full h-full object-cover opacity-90">
+    <!-- 백그라운드 영상 및 할로윈 무드 백업 레이어 -->
+    <div class="absolute inset-0 z-0 overflow-hidden bg-[#030106] flex items-center justify-center">
+      <video id="tvBackgroundVideo" autoplay loop muted playsinline class="w-full h-full object-cover opacity-80" onerror="this.style.display='none'">
         <source src="assets/video/bg_ambient.webm" type="video/webm">
-        브라우저가 비디오 태그를 지원하지 않습니다.
+        <source src="video/bg_ambient.webm" type="video/webm">
       </video>
-      <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 pointer-events-none"></div>
+      <!-- 비디오 로딩 실패 시 나타나는 몽환적인 할로윈 앰비언트 백그라운드 -->
+      <div class="absolute inset-0 bg-gradient-to-b from-purple-950/40 via-black to-red-950/30 anim-glow pointer-events-none"></div>
     </div>
 
-    <!-- 상단 헤더 (첫 화면에서는 숨김 처리) -->
-    <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/50 backdrop-blur-sm">
+    <!-- 상단 헤더 -->
+    <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/60 backdrop-blur-md">
       <div class="flex items-center gap-3">
         <span class="text-2xl">🕯️</span>
         <div>
@@ -58,8 +61,8 @@
     <!-- 중앙 컨텐츠 -->
     <div id="tvStageContainer" class="my-auto py-8 px-8 z-10 flex-1 flex items-center justify-center w-full"></div>
 
-    <!-- 하단 푸터 (첫 화면에서는 숨김 처리) -->
-    <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 z-10 bg-black/60 backdrop-blur-sm">
+    <!-- 하단 푸터 -->
+    <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 z-10 bg-black/70 backdrop-blur-md">
       <div>🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div>
       <div class="text-orange-300 font-bold">HALLOWEEN SURVIVAL GAME 2026</div>
     </div>
@@ -108,12 +111,6 @@
   </main>
 
   <script>
-    const firebaseConfig = {
-      databaseURL: "https://halloween-2026-sync-default-rtdb.firebaseio.com/"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
     const ADMIN_PIN = "261031";
 
     const STAGES = [
@@ -142,19 +139,37 @@
     let historyStack = [];
     let activeMobileCode = null;
 
-    db.ref('halloween_state').on('value', (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        appData = data;
-      } else {
-        db.ref('halloween_state').set(appData);
+    // 초고속 로컬/클라우드 통합 싱크 엔진 (BroadcastChannel + Storage)
+    const channel = new BroadcastChannel('halloween_sync_channel');
+
+    function syncLoad() {
+      const saved = localStorage.getItem('halloween_party_data');
+      if (saved) {
+        try { appData = JSON.parse(saved); } catch(e){}
       }
-      renderAll();
-    });
+    }
 
     function syncSave() {
-      db.ref('halloween_state').set(appData);
+      localStorage.setItem('halloween_party_data', JSON.stringify(appData));
+      channel.postMessage(appData); // 열려있는 모든 창(TV, 리모컨 등)에 즉시 방송
+      renderAll();
     }
+
+    channel.onmessage = (event) => {
+      if (event.data) {
+        appData = event.data;
+        renderAll();
+      }
+    };
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'halloween_party_data' && e.newValue) {
+        try {
+          appData = JSON.parse(e.newValue);
+          renderAll();
+        } catch(err){}
+      }
+    });
 
     function routeView() {
       const hash = window.location.hash.replace('#', '') || 'tv';
@@ -222,7 +237,6 @@
       const topHeader = document.getElementById('tvTopHeader');
       const footerBar = document.getElementById('tvFooterBar');
 
-      // 첫 번째 화면(6~7시)일 때는 완벽한 유튜브/앰비언트처럼 상하단바 숨김
       if (st.id === 'STAGE_REST_6PM') {
         if(topHeader) topHeader.style.display = 'none';
         if(footerBar) footerBar.style.display = 'none';
@@ -237,15 +251,15 @@
       if(!box) return;
 
       if (st.id === 'STAGE_REST_6PM') {
-        box.innerHTML = `<div class="absolute top-4 left-6 text-white/30 text-xs font-bold pointer-events-none">🎶 Ambient Background Playing</div>`;
+        box.innerHTML = `<div class="absolute top-4 left-6 text-white/40 text-xs font-bold pointer-events-none">🎶 Ambient Background Playing</div>`;
       } else if (st.id === 'STAGE_STORY_INTRO') {
-        box.innerHTML = `<div class="text-center space-y-4 bg-black/80 border border-red-500/50 p-8 rounded-3xl max-w-2xl mx-auto backdrop-blur-md"><h2 class="text-3xl font-black text-red-400">할로윈 게임에 오신 것을 환영합니다</h2><p class="text-sm text-gray-300">저택에 숨은 유령을 찾아내십시오.</p></div>`;
+        box.innerHTML = `<div class="text-center space-y-4 bg-black/85 border-2 border-red-500/60 p-10 rounded-3xl max-w-2xl mx-auto backdrop-blur-md shadow-2xl"><h2 class="text-3xl md:text-4xl font-black text-red-400">할로윈 게임에 오신 것을 환영합니다</h2><p class="text-sm md:text-base text-gray-200">저택에 숨은 유령을 찾아내십시오.</p></div>`;
       } else if (st.id === 'STAGE_QR_GUIDE') {
         const url = window.location.href.split('#')[0] + '#mobile';
-        box.innerHTML = `<div class="text-center space-y-4 bg-black/85 border border-purple-500/50 p-8 rounded-3xl max-w-xl mx-auto backdrop-blur-md"><h3 class="text-xl font-black text-white">스마트폰으로 참여하세요</h3><div id="qrBox" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
+        box.innerHTML = `<div class="text-center space-y-4 bg-black/85 border-2 border-purple-500/60 p-10 rounded-3xl max-w-xl mx-auto backdrop-blur-md shadow-2xl"><h3 class="text-xl font-black text-white">스마트폰으로 참여하세요</h3><div id="qrBox" class="inline-block bg-white p-3 rounded-xl shadow-lg"></div></div>`;
         setTimeout(() => { const q = document.getElementById('qrBox'); if (q && q.innerHTML === '') new QRCode(q, { text: url, width: 140, height: 140 }); }, 100);
       } else {
-        box.innerHTML = `<div class="text-center bg-black/70 border border-white/20 p-8 rounded-3xl max-w-xl mx-auto backdrop-blur-md"><h2 class="text-2xl font-black text-orange-400">${st.title}</h2></div>`;
+        box.innerHTML = `<div class="text-center bg-black/80 border-2 border-orange-500/60 p-10 rounded-3xl max-w-xl mx-auto backdrop-blur-md shadow-2xl"><h2 class="text-3xl font-black text-orange-400">${st.title}</h2></div>`;
       }
     }
 
@@ -284,7 +298,7 @@
       const listEl = document.getElementById('remoteStageList');
       if(listEl) {
         listEl.innerHTML = STAGES.map((s, idx) => `
-          <button onclick="jumpToStage(${idx})" class="p-2 rounded border text-left ${idx === appData.state.stageIdx ? 'bg-orange-600 text-white font-black' : 'bg-gray-900 text-gray-300'}">
+          <button onclick="jumpToStage(${idx})" class="p-2.5 rounded-xl border text-left transition ${idx === appData.state.stageIdx ? 'bg-orange-600 border-orange-400 text-white font-black' : 'bg-gray-900 border-gray-800 text-gray-300'}">
             <div class="text-[9px] opacity-75">${s.time}</div><div class="truncate">${s.title}</div>
           </button>
         `).join('');
@@ -307,6 +321,8 @@
       if (hash === 'mobile' && activeMobileCode) renderMobileCard();
     }
 
+    // 최초 로드
+    syncLoad();
     if (!window.location.hash) {
       window.location.hash = 'tv';
     } else {
