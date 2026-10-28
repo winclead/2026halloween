@@ -6,6 +6,9 @@
   <title>HALLOWEEN 2026: SURVIVAL GAME SYSTEM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Firebase 실시간 동기화 SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Noto Sans KR', sans-serif; background-color: #040208; color: #f3f4f6; overflow-x: hidden; }
@@ -19,53 +22,32 @@
 </head>
 <body class="min-h-screen flex flex-col" id="bodyRoot">
 
-  <!-- 은밀한 히든 네비게이션 (구석의 작은 이모티콘 클릭 시 메뉴 노출) -->
-  <header class="bg-[#0b0714]/80 border-b border-orange-500/20 px-4 py-1.5 flex items-center justify-between z-50">
-    <div class="flex items-center gap-2 cursor-pointer" onclick="openSecretNav()">
-      <span class="text-sm opacity-60 hover:opacity-100 transition">🎃</span>
-      <span class="text-[10px] text-gray-500 font-bold">SYSTEM ACTIVE</span>
-    </div>
-    <div id="secretNavMenu" class="hidden flex items-center gap-1.5 bg-black/90 p-1 rounded-xl border border-gray-800">
-      <button onclick="switchView('tv')" class="px-2.5 py-1 rounded text-[11px] font-black bg-orange-600 text-white">📺 TV 전광판</button>
-      <button onclick="switchView('mobile')" class="px-2.5 py-1 rounded text-[11px] font-black bg-purple-900 text-white">📱 참가자 모드</button>
-      <button onclick="tryOpenAdmin()" class="px-2.5 py-1 rounded text-[11px] font-black bg-red-900 text-white">🛠️ GM 리모컨</button>
-    </div>
-  </header>
-
   <!-- =========================================================
-       VIEW 1: 📺 거실 TV 메인 디스플레이 (전광판)
+       VIEW 1: 📺 거실 TV 메인 디스플레이 (노트북 #tv 전용)
   ========================================================== -->
-  <main id="view-tv" class="flex-1 flex flex-col justify-between relative overflow-hidden bg-black min-h-[calc(100vh-36px)]">
-    
-    <!-- 로컬 비디오 백그라운드 레이어 (bg_ambient.webm 활용 및 Play/Stop 컨트롤 장착) -->
-    <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center pointer-events-none">
-      <video id="tvBackgroundVideo" autoplay loop playsinline class="w-full h-full object-cover opacity-90">
+  <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-black min-h-screen">
+    <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
+      <video id="tvBackgroundVideo" autoplay loop muted playsinline class="w-full h-full object-cover opacity-90">
         <source src="assets/video/bg_ambient.webm" type="video/webm">
         브라우저가 비디오 태그를 지원하지 않습니다.
       </video>
       <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 pointer-events-none"></div>
     </div>
 
-    <!-- 상단 헤더 오버레이 -->
-    <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/40 backdrop-blur-sm">
+    <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/50 backdrop-blur-sm">
       <div class="flex items-center gap-3">
-        <span class="text-2xl" id="tvHeaderIcon">🕯️</span>
+        <span class="text-2xl">🕯️</span>
         <div>
           <div class="text-[10px] text-orange-400 font-bold tracking-widest uppercase" id="tvSubHeaderBadge">LIVING ROOM LOUNGE</div>
           <h1 class="text-lg md:text-xl font-black text-white" id="tvStageTitleText">평온한 저택</h1>
         </div>
       </div>
-
-      <!-- 우측: 미디어 재생/정지 버튼 + 실시간 시계 & 카운트다운 -->
-      <div class="flex items-center gap-3" id="tvHeaderRightInfo">
-        <!-- Play / Stop 토글 버튼 -->
-        <div class="flex items-center gap-1 bg-black/80 border border-orange-500/40 rounded-2xl px-3 py-1 pointer-events-auto">
-          <button onclick="toggleMediaPlay()" id="mediaPlayBtn" class="text-xs font-black text-emerald-400 hover:text-white transition px-2 py-0.5 bg-emerald-950/60 rounded-lg border border-emerald-500/40">
-            ⏹ STOP
-          </button>
-        </div>
-
-        <div class="bg-red-950/80 border border-red-500/60 rounded-2xl px-3 py-1 text-center shadow-lg" id="countdownBox">
+      <div class="flex items-center gap-3">
+        <!-- 재생/정지 버튼 -->
+        <button onclick="toggleMediaPlay()" id="mediaPlayBtn" class="text-xs font-black text-emerald-400 px-3 py-1 bg-emerald-950/80 rounded-xl border border-emerald-500/40 pointer-events-auto">
+          ⏹ STOP
+        </button>
+        <div class="bg-red-950/80 border border-red-500/60 rounded-2xl px-3 py-1 text-center shadow-lg">
           <div class="text-[9px] text-red-300 font-bold">⏰ 심판까지</div>
           <div class="text-xs md:text-sm font-black text-red-400 font-gothic" id="tvCountdownTimer">00:00:00</div>
         </div>
@@ -76,193 +58,121 @@
       </div>
     </div>
 
-    <!-- 중앙 컨텐츠 영역 -->
     <div id="tvStageContainer" class="my-auto py-8 px-8 z-10 flex-1 flex items-center justify-center w-full"></div>
 
-    <!-- 하단 푸터 오버레이 -->
-    <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 z-10 bg-black/50 backdrop-blur-sm">
-      <div id="tvFooterNotice">🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div>
+    <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 z-10 bg-black/60 backdrop-blur-sm">
+      <div>🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div>
       <div class="text-orange-300 font-bold">HALLOWEEN SURVIVAL GAME 2026</div>
     </div>
   </main>
 
   <!-- =========================================================
-       VIEW 2: 📱 참가자 스마트폰 화면
+       VIEW 2: 📱 참가자 스마트폰 화면 (#mobile 전용)
   ========================================================== -->
   <main id="view-mobile" class="hidden flex-1 py-6 px-4 flex justify-center items-start bg-[#06040a]">
-    <div class="w-full max-w-md bg-[#130e21] border-2 border-purple-500/40 rounded-3xl overflow-hidden shadow-2xl">
-      <div class="bg-gradient-to-r from-purple-950 to-indigo-950 px-5 py-4 border-b border-purple-500/30 flex items-center justify-between">
-        <div>
-          <span class="text-[10px] font-bold text-orange-400 uppercase">PLAYER MOBILE TERMINAL</span>
-          <h2 class="text-base font-black text-white" id="mobileHeaderTitle">참가자 지령서 & 투표소</h2>
-        </div>
-        <button onclick="logoutMobile()" id="btnMobileLogout" class="hidden text-xs px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 font-bold">
-          로그아웃
-        </button>
+    <div class="w-full max-w-md bg-[#130e21] border-2 border-purple-500/40 rounded-3xl overflow-hidden shadow-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-purple-500/30 pb-3">
+        <h2 class="text-base font-black text-white">참가자 지령서 & 투표소</h2>
+        <button onclick="logoutMobile()" id="btnMobileLogout" class="hidden text-xs px-2.5 py-1 bg-gray-800 rounded-lg text-gray-300 font-bold">로그아웃</button>
       </div>
-
-      <div class="p-5 space-y-5" id="mobileBodyContainer">
-        <div id="mobileLoginBox" class="space-y-4">
-          <div class="bg-purple-950/30 border border-purple-500/30 rounded-2xl p-3.5 text-xs text-gray-300 leading-relaxed">
-            🃏 호스트에게 받은 칩의 <b>비밀 코드</b>와 <b>실명(세 글자)</b>을 입력하세요.
-          </div>
-          <div class="space-y-3">
-            <div>
-              <label class="text-xs font-bold text-gray-400 block mb-1">비밀 코드</label>
-              <input id="inputCode" type="text" placeholder="예: T5780" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-black tracking-widest uppercase text-center text-lg">
-            </div>
-            <div>
-              <label class="text-xs font-bold text-gray-400 block mb-1">본인 실명 (세 글자)</label>
-              <input id="inputName" type="text" maxlength="4" placeholder="예: 김철수" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-bold text-center text-base">
-            </div>
-            <button onclick="loginMobile()" class="w-full py-3.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-black rounded-xl text-sm shadow-lg">
-              🔮 내 정체 및 지령 확인하기
-            </button>
-          </div>
-        </div>
-        <div id="mobileCardContent" class="hidden space-y-4"></div>
+      <div id="mobileLoginBox" class="space-y-3">
+        <input id="inputCode" type="text" placeholder="비밀 코드 입력 (예: T5780)" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-black uppercase text-center text-sm">
+        <input id="inputName" type="text" maxlength="4" placeholder="실명 세 글자" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-bold text-center text-sm">
+        <button onclick="loginMobile()" class="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl text-sm">정체 확인하기</button>
       </div>
+      <div id="mobileCardContent" class="hidden space-y-3"></div>
     </div>
   </main>
 
   <!-- =========================================================
-       VIEW 3: 🛠️ 호스트 GM 리모컨 (비밀번호 261031)
+       VIEW 3: 🛠️ 호스트 GM 리모컨 (스마트폰 #admin 전용)
   ========================================================== -->
   <main id="view-admin" class="hidden flex-1 py-4 px-3 flex justify-center items-start bg-[#050308]">
-    <div class="w-full max-w-lg bg-[#120d1d] border-2 border-orange-500/50 rounded-3xl overflow-hidden shadow-2xl space-y-5 p-4 md:p-5">
-
-      <div class="bg-gradient-to-r from-orange-950/80 to-purple-950/80 border border-orange-500/40 rounded-2xl p-3.5 space-y-3">
-        <div class="flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-black text-orange-400 uppercase">HOST REMOTE CONTROLLER</span>
-            <h2 class="text-base font-black text-white">📱 GM 리모컨 (TV 실시간 조종)</h2>
-          </div>
-          <button onclick="seedAllDemoPlayers()" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-[11px] font-bold">
-            ⚡ 5명 테스트 자동등록
-          </button>
+    <div class="w-full max-w-lg bg-[#120d1d] border-2 border-orange-500/50 rounded-3xl p-4 space-y-4 shadow-2xl">
+      <div class="bg-orange-950/60 border border-orange-500/40 rounded-2xl p-3 space-y-2">
+        <div class="flex justify-between items-center">
+          <h2 class="text-sm font-black text-white">📱 GM 리모컨 (TV 조종 패널)</h2>
+          <button onclick="seedAllDemoPlayers()" class="px-2 py-1 bg-emerald-700 text-white rounded text-[11px] font-bold">테스트 5명 등록</button>
         </div>
-
-        <div class="grid grid-cols-3 gap-2 pt-1">
-          <button onclick="prevStage()" class="py-2.5 bg-gray-800 hover:bg-gray-700 active:scale-95 text-white font-black rounded-xl text-xs border border-gray-600">
-            ◀ 이전 화면
-          </button>
-          <button onclick="undoLastAction()" class="py-2.5 bg-amber-900/70 hover:bg-amber-800 active:scale-95 text-amber-200 font-black rounded-xl text-xs border border-amber-500/40">
-            ↩ Undo
-          </button>
-          <button onclick="nextStage()" class="py-2.5 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white font-black rounded-xl text-xs shadow-lg">
-            다음 화면 ▶
-          </button>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="prevStage()" class="py-2 bg-gray-800 text-white font-black rounded-xl text-xs">◀ 이전</button>
+          <button onclick="undoLastAction()" class="py-2 bg-amber-900 text-amber-200 font-black rounded-xl text-xs">↩ Undo</button>
+          <button onclick="nextStage()" class="py-2 bg-orange-600 text-white font-black rounded-xl text-xs">다음 ▶</button>
         </div>
-        <div class="text-[11px] text-center text-orange-200 font-bold bg-black/40 py-1 rounded-lg" id="remoteCurrentStageLabel">
-          현재 TV: 대기중
-        </div>
+        <div class="text-[11px] text-center text-orange-200 font-bold bg-black/40 py-1 rounded-lg" id="remoteCurrentStageLabel">현재 화면</div>
       </div>
-
-      <section class="bg-[#191229] border border-purple-500/40 rounded-2xl p-4 space-y-3">
-        <h3 class="text-xs font-black text-purple-300 uppercase">🎮 미니게임 점수 & 승리자 관리 (추가 투표권+1)</h3>
-        <div id="remoteGameManager" class="space-y-2"></div>
-      </section>
-
-      <section class="bg-[#161024] border border-gray-800 rounded-2xl p-4 space-y-2.5">
-        <h3 class="text-xs font-black text-orange-400">⏱️ 전체 화면 바로가기</h3>
+      <div class="bg-[#161024] border border-gray-800 rounded-2xl p-3 space-y-2">
+        <h3 class="text-xs font-black text-orange-400">⏱️ 화면 바로가기</h3>
         <div id="remoteStageList" class="grid grid-cols-2 gap-1.5 text-xs"></div>
-      </section>
-
+      </div>
     </div>
   </main>
 
   <script>
+    // Firebase 무료 실시간 데이터베이스 설정 (동기화 엔진)
+    const firebaseConfig = {
+      databaseURL: "https://halloween-2026-sync-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     const ADMIN_PIN = "261031";
 
-    // 모든 스테이지에서 bg_ambient.webm 소스를 고정 활용
     const STAGES = [
-      { id: 'STAGE_REST_6PM',    time: '18:00 ~ 19:00', title: '평온한 저택 라운지', nextInfo: '미정', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_STORY_INTRO', time: '19:00',          title: '오프닝 & 저주의 스토리텔링', nextInfo: '지령서 배포', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_QR_GUIDE',    time: '19:15',          title: '지령서 확인 및 스마트폰 코드 등록', nextInfo: '자유 네트워킹', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_PARTY_ROOM',  time: '19:30',          title: '할로윈 나이트 — 결계 가동 중', nextInfo: '미니게임', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_GAME_8PM',    time: '20:00',          title: '8시 미니게임: 『저주받은 명작』', nextInfo: '다음 미니게임', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_GAME_9PM',    time: '21:00',          title: '9시 미니게임: 『강령술의 라디오』', nextInfo: '최후의 심판', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_VOTE_10PM',   time: '22:00',          title: '10시 최후의 심판 — 처형대 2인 투표', nextInfo: '결과 발표', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_VOTE_RESULT', time: '22:15',          title: '처형대 결과 발표 & 정체 공개', nextInfo: '미션 검증', src: 'assets/video/bg_ambient.webm' },
-      { id: 'STAGE_MISSION_OPEN',time: '22:30',          title: '진실의 방 — 유령의 미션 성공 여부 Open', nextInfo: '종료', src: 'assets/video/bg_ambient.webm' }
+      { id: 'STAGE_REST_6PM',    time: '18:00', title: '평온한 저택 라운지' },
+      { id: 'STAGE_STORY_INTRO', time: '19:00', title: '오프닝 & 저주의 스토리텔링' },
+      { id: 'STAGE_QR_GUIDE',    time: '19:15', title: '지령서 확인 및 스마트폰 코드 등록' },
+      { id: 'STAGE_PARTY_ROOM',  time: '19:30', title: '할로윈 나이트 — 결계 가동 중' },
+      { id: 'STAGE_GAME_8PM',    time: '20:00', title: '8시 미니게임' },
+      { id: 'STAGE_GAME_9PM',    time: '21:00', title: '9시 미니게임' },
+      { id: 'STAGE_VOTE_10PM',   time: '22:00', title: '10시 최후의 심판 — 투표' },
+      { id: 'STAGE_VOTE_RESULT', time: '22:15', title: '처형대 결과 발표' },
+      { id: 'STAGE_MISSION_OPEN',time: '22:30', title: '진실의 방 — 결과 오픈' }
     ];
 
     const INITIAL_CARDS = {
-      'N3611': { code: 'N3611', trueRole: 'GHOST', charIcon: '🐺', charName: '늑대인간', charDesc: '보름달이 뜨면 감각이 예민해지는 은빛 늑대인간입니다.', secretTitle: '👻 당신의 진짜 정체: [유령]', secretDesc: '• 미치광이를 제외한 인간 4명에게서 약점 4개를 캐내어 기록하세요!\n• 10시 최종 투표에서 최다 득표 2인에 포함되되, 처형을 피해야 승리합니다.', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
-      'G7420': { code: 'G7420', trueRole: 'MADMAN', charIcon: '🎭', charName: '광대', charDesc: '할로윈 밤마다 가면을 쓰고 나타나는 광대입니다.', secretTitle: '🤪 당신의 진짜 정체: [미치광이]', secretDesc: '• 유령이 누군지 모릅니다. 유령인 척 연기하여 최종 투표에서 최다 득표(처형대)에 오르면 승리합니다!', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
-      'T5780': { code: 'T5780', trueRole: 'HUMAN', charIcon: '✝️', charName: '퇴마사', charDesc: '성수와 십자가로 악령을 쫓는 냉철한 퇴마사입니다.', secretTitle: '🎃 당신의 정체: [인간 생존자]', secretDesc: '• 미치광이를 피하고 진짜 유령을 찾아내어 10시 투표로 성불(처형)시키면 승리합니다!', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
-      'M2491': { code: 'M2491', trueRole: 'HUMAN', charIcon: '🧪', charName: '마녀', charDesc: '약초와 마법 물약을 다루는 숲속의 마녀입니다.', secretTitle: '🎃 당신의 정체: [인간 생존자]', secretDesc: '• 미치광이를 피하고 진짜 유령을 찾아내어 10시 투표로 성불(처형)시키면 승리합니다!', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
-      'B8312': { code: 'B8312', trueRole: 'HUMAN', charIcon: '🧛', charName: '뱀파이어', charDesc: '고풍스러운 뱀파이어 귀족입니다.', secretTitle: '🎃 당신의 정체: [인간 생존자]', secretDesc: '• 미치광이를 피하고 진짜 유령을 찾아내어 10시 투표로 성불(처형)시키면 승리합니다!', playerName: '', score: 0, bonusVotes: 0, votedFor: '' }
+      'N3611': { code: 'N3611', charIcon: '🐺', charName: '늑대인간', charDesc: '유령 역할입니다.', secretTitle: '👻 정체: [유령]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'G7420': { code: 'G7420', charIcon: '🎭', charName: '광대', charDesc: '미치광이 역할입니다.', secretTitle: '🤪 정체: [미치광이]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', charDesc: '인간 생존자입니다.', secretTitle: '🎃 정체: [인간]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' }
     };
 
     let appData = {
-      state: { stageIdx: 0, lastWinnerAnnouncement: '' },
+      state: { stageIdx: 0 },
       cards: JSON.parse(JSON.stringify(INITIAL_CARDS))
     };
 
     let historyStack = [];
     let activeMobileCode = null;
-    let isAdminUnlocked = false;
 
-    function syncSave() { localStorage.setItem('halloween_app_state', JSON.stringify(appData)); }
-    function syncLoad() {
-      const saved = localStorage.getItem('halloween_app_state');
-      if (saved) { try { appData = JSON.parse(saved); } catch(e){} }
-    }
-
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'halloween_app_state') { syncLoad(); renderAll(); }
+    // Firebase를 통한 실시간 데이터 동기화 리스너
+    db.ref('halloween_state').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        appData = data;
+        renderAll();
+      }
     });
 
-    setInterval(() => {
-      const now = new Date();
-      const target = new Date();
-      target.setHours(22, 0, 0, 0);
-      let diff = target - now;
-      if (diff < 0) diff = 0;
-
-      const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
-      const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-      const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-      
-      const timerEl = document.getElementById('tvCountdownTimer');
-      if (timerEl) timerEl.innerText = `${hh}:${mm}:${ss}`;
-
-      const clockEl = document.getElementById('tvRealtimeClock');
-      if (clockEl) clockEl.innerText = now.toTimeString().split(' ')[0];
-
-      const totalSec = Math.floor(diff / 1000);
-      const rootBody = document.getElementById('bodyRoot');
-      if (totalSec > 0 && totalSec <= 300) {
-        if (rootBody && !rootBody.classList.contains('anim-alert')) rootBody.classList.add('anim-alert');
-      } else {
-        if (rootBody) rootBody.classList.remove('anim-alert');
-      }
-
-      if (totalSec === 0 && appData.state.stageIdx === 5) {
-        jumpToStage(6);
-      }
-    }, 1000);
-
-    function openSecretNav() {
-      const menu = document.getElementById('secretNavMenu');
-      menu.classList.toggle('hidden');
+    function syncSave() {
+      db.ref('halloween_state').set(appData);
     }
 
-    function tryOpenAdmin() {
-      if (!isAdminUnlocked) {
-        const pin = prompt('🛠️ GM 리모컨 비밀번호 입력 (6자리):');
-        if (pin !== ADMIN_PIN) { alert('비밀번호가 틀렸습니다!'); return; }
-        isAdminUnlocked = true;
+    // URL 해시값(#tv, #admin, #mobile)을 읽어서 해당 뷰만 강제 출력
+    function routeView() {
+      const hash = window.location.hash.replace('#', '') || 'tv';
+      if (hash === 'admin') {
+        const pin = prompt('🛠️ GM 비밀번호 입력 (261031):');
+        if (pin !== ADMIN_PIN) { alert('비밀번호가 틀렸습니다!'); window.location.hash = 'tv'; return; }
       }
-      switchView('admin');
+      switchView(hash);
     }
+
+    window.addEventListener('hashchange', routeView);
 
     function switchView(view) {
-      ['tv', 'mobile', 'admin'].forEach(v => {
-        document.getElementById(`view-${v}`).classList.add('hidden');
-      });
-      document.getElementById(`view-${view}`).classList.remove('hidden');
+      ['tv', 'mobile', 'admin'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+      const target = document.getElementById(`view-${view}`);
+      if (target) target.classList.remove('hidden');
       renderAll();
     }
 
@@ -271,25 +181,19 @@
       if (historyStack.length > 20) historyStack.shift();
     }
 
-    function undoLastAction() {
-      if (historyStack.length === 0) { alert('되돌릴 내역이 없습니다.'); return; }
-      appData = historyStack.pop();
-      syncSave();
-      renderAll();
-    }
+    function prevStage() { if (appData.state.stageIdx > 0) { saveHistory(); appData.state.stageIdx--; syncSave(); } }
+    function nextStage() { if (appData.state.stageIdx < STAGES.length - 1) { saveHistory(); appData.state.stageIdx++; syncSave(); } }
+    function jumpToStage(idx) { saveHistory(); appData.state.stageIdx = idx; syncSave(); }
 
-    // 미디어 Play / Stop 토글 함수
     function toggleMediaPlay() {
       const vid = document.getElementById('tvBackgroundVideo');
       const btn = document.getElementById('mediaPlayBtn');
       if (vid.paused) {
         vid.play();
         btn.innerText = "⏹ STOP";
-        btn.className = "text-xs font-black text-emerald-400 hover:text-white transition px-2 py-0.5 bg-emerald-950/60 rounded-lg border border-emerald-500/40";
       } else {
         vid.pause();
         btn.innerText = "▶ PLAY";
-        btn.className = "text-xs font-black text-orange-400 hover:text-white transition px-2 py-0.5 bg-orange-950/60 rounded-lg border border-orange-500/40";
       }
     }
 
@@ -308,223 +212,75 @@
       }
 
       const box = document.getElementById('tvStageContainer');
-
       if (st.id === 'STAGE_REST_6PM') {
-        box.innerHTML = `<div class="absolute top-4 left-6 text-white/30 text-xs font-bold tracking-widest flex items-center gap-2 pointer-events-none"><span>🎶</span> <span>Background Ambience Playing</span></div>`;
-      }
-      else if (st.id === 'STAGE_STORY_INTRO') {
-        box.innerHTML = `
-          <div class="text-center space-y-6 bg-black/80 border-2 border-red-500/50 p-10 rounded-3xl backdrop-blur-md max-w-3xl mx-auto shadow-2xl">
-            <div class="text-6xl animate-bounce">🎬</div>
-            <h2 class="text-3xl md:text-4xl font-black text-red-400">할로윈 게임에 오신 여러분, 환영합니다.</h2>
-            <p class="text-sm md:text-base text-gray-200 leading-relaxed">
-              지금 이 순간부터 평온한 밤은 끝났습니다.<br>
-              저택 내부에 숨어든 <b>유령</b>이 여러분의 영혼을 훔쳐 저승의 문을 열려 합니다.<br>
-              지금부터 생존을 위한 처절한 심판이 시작됩니다.
-            </p>
-          </div>
-        `;
-      }
-      else if (st.id === 'STAGE_QR_GUIDE') {
-        const currentUrl = window.location.href.split('#')[0];
-        box.innerHTML = `
-          <div class="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div class="bg-black/85 border-2 border-purple-500/60 rounded-3xl p-8 text-center space-y-5 shadow-2xl backdrop-blur-md">
-              <div class="text-4xl">📱✨</div>
-              <h3 class="text-2xl font-black text-white">스마트폰으로 QR을 스캔하세요!</h3>
-              <p class="text-xs text-gray-300">링크를 잘 저장해두세요. 언제든 재확인할 수 있습니다.</p>
-              <div class="flex justify-center py-2"><div id="tvQRCodeBox" class="p-3 bg-white rounded-2xl shadow-lg"></div></div>
-            </div>
-            <div class="bg-black/85 border-2 border-orange-500/60 rounded-3xl p-8 space-y-4 shadow-2xl backdrop-blur-md text-left">
-              <div class="text-xl font-black text-orange-400">📜 생존 게임 핵심 규칙 요약</div>
-              <ul class="text-xs md:text-sm text-gray-200 space-y-2.5 list-disc pl-5 leading-relaxed">
-                <li><b>인간들 사이의 유령:</b> 유령 1명이 숨어 미션을 수행합니다.</li>
-                <li><b>미치광이의 존재:</b> 유령을 도우며, 최종 투표에서 처형되어야 승리합니다.</li>
-                <li><b>최종 투표 방식:</b> 밤 10시, 각자 2표씩 행사하며 최다 득표 2인을 처형합니다.</li>
-                <li><b>동률 우선순위:</b> 2위 동률 시, <u>파티에 가장 먼저 도착한 사람</u>의 표가 우선합니다!</li>
-              </ul>
-            </div>
-          </div>
-        `;
-        setTimeout(() => {
-          const q = document.getElementById('tvQRCodeBox');
-          if (q && q.innerHTML === '') new QRCode(q, { text: currentUrl, width: 160, height: 160 });
-        }, 100);
-      }
-      else if (st.id === 'STAGE_PARTY_ROOM') {
-        const regs = Object.values(appData.cards).filter(c => c.playerName);
-        box.innerHTML = `
-          <div class="w-full max-w-6xl mx-auto text-center space-y-8">
-            <h2 class="text-3xl md:text-5xl font-black text-white">저택에 모인 생존자 명단</h2>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-              ${regs.map(c => `
-                <div class="bg-black/75 border border-purple-500/40 rounded-3xl p-5 flex flex-col items-center justify-center space-y-2 backdrop-blur-md">
-                  <div class="text-4xl">${c.charIcon}</div>
-                  <div class="text-xs text-orange-400 font-bold">${c.charName}</div>
-                  <div class="text-lg font-black text-white">${c.playerName}</div>
-                  <div class="text-[10px] text-gray-400">점수: ${c.score}점 | 추가표: +${c.bonusVotes}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }
-      else if (st.id === 'STAGE_GAME_8PM' || st.id === 'STAGE_GAME_9PM') {
-        box.innerHTML = `
-          <div class="bg-black/85 border-2 border-orange-500/60 rounded-3xl p-10 max-w-3xl w-full mx-auto text-center space-y-6 shadow-2xl backdrop-blur-md">
-            <div class="text-5xl">🏆</div>
-            <h2 class="text-3xl font-black text-orange-400">${st.title}</h2>
-            <p class="text-sm text-gray-200 leading-relaxed">이 미니게임 승리자에게는 <b>추가 투표권(+1표)</b>이 즉시 지급됩니다!</p>
-          </div>
-        `;
-      }
-      else if (st.id === 'STAGE_VOTE_10PM') {
-        const total = Object.values(appData.cards).filter(c => c.playerName).length;
-        const votedCount = Object.values(appData.cards).filter(c => c.playerName && c.votedFor).length;
-        box.innerHTML = `
-          <div class="w-full max-w-4xl mx-auto bg-black/85 border-2 border-red-500/60 rounded-3xl p-10 text-center space-y-6 shadow-2xl backdrop-blur-md">
-            <div class="text-5xl animate-bounce">⚖️</div>
-            <h2 class="text-3xl md:text-4xl font-black text-red-400">10시 최후의 심판 — 처형대 투표 진행 중</h2>
-            <p class="text-sm text-gray-300">스마트폰에서 처형할 대상을 선택하세요!</p>
-            <div class="text-xl font-black text-orange-300 bg-red-950/50 py-3 rounded-2xl border border-red-500/40">
-              🗳️ 투표 현황: ${votedCount} / ${total} 명 완료
-            </div>
-          </div>
-        `;
-      }
-      else if (st.id === 'STAGE_VOTE_RESULT' || st.id === 'STAGE_MISSION_OPEN') {
-        box.innerHTML = `
-          <div class="w-full max-w-4xl mx-auto bg-black/95 border-2 border-red-600 rounded-3xl p-10 text-center space-y-6 shadow-2xl backdrop-blur-md">
-            <div class="text-5xl">💀</div>
-            <h2 class="text-3xl md:text-4xl font-black text-white">${st.title}</h2>
-            <p class="text-sm text-red-300">결과가 공개되었습니다.</p>
-          </div>
-        `;
+        box.innerHTML = `<div class="absolute top-4 left-6 text-white/30 text-xs font-bold">🎶 Ambient Background Playing</div>`;
+      } else if (st.id === 'STAGE_STORY_INTRO') {
+        box.innerHTML = `<div class="text-center space-y-4 bg-black/80 border border-red-500/50 p-8 rounded-3xl max-w-2xl mx-auto"><h2 class="text-3xl font-black text-red-400">할로윈 게임에 오신 것을 환영합니다</h2><p class="text-sm text-gray-300">저택에 숨은 유령을 찾아내십시오.</p></div>`;
+      } else if (st.id === 'STAGE_QR_GUIDE') {
+        const url = window.location.href.split('#')[0] + '#mobile';
+        box.innerHTML = `<div class="text-center space-y-4 bg-black/85 border border-purple-500/50 p-8 rounded-3xl max-w-xl mx-auto"><h3 class="text-xl font-black text-white">스마트폰으로 참여하세요</h3><div id="qrBox" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
+        setTimeout(() => { const q = document.getElementById('qrBox'); if (q && q.innerHTML === '') new QRCode(q, { text: url, width: 140, height: 140 }); }, 100);
+      } else {
+        box.innerHTML = `<div class="text-center bg-black/70 border border-white/20 p-8 rounded-3xl max-w-xl mx-auto"><h2 class="text-2xl font-black text-orange-400">${st.title}</h2></div>`;
       }
     }
 
     function loginMobile() {
       const code = document.getElementById('inputCode').value.trim().toUpperCase();
       const name = document.getElementById('inputName').value.trim();
-      if (!appData.cards[code]) { alert('올바른 비밀 코드를 입력해 주세요!'); return; }
-      if (name.length < 2) { alert('실명 세 글자를 입력해 주세요!'); return; }
-      
-      saveHistory();
+      if (!appData.cards[code]) { alert('코드가 올바르지 않습니다.'); return; }
       appData.cards[code].playerName = name;
       activeMobileCode = code;
-      
+      syncSave();
       document.getElementById('mobileLoginBox').classList.add('hidden');
       document.getElementById('mobileCardContent').classList.remove('hidden');
       document.getElementById('btnMobileLogout').classList.remove('hidden');
-      syncSave();
-      renderAll();
+      renderMobileCard();
     }
-
     function logoutMobile() {
       activeMobileCode = null;
       document.getElementById('mobileLoginBox').classList.remove('hidden');
       document.getElementById('mobileCardContent').classList.add('hidden');
       document.getElementById('btnMobileLogout').classList.add('hidden');
     }
-
     function renderMobileCard() {
       if (!activeMobileCode) return;
       const c = appData.cards[activeMobileCode];
-      const st = STAGES[appData.state.stageIdx];
-      
-      let html = `
-        <div class="bg-purple-950/80 border border-purple-500/50 rounded-2xl p-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="text-3xl">${c.charIcon}</span>
-            <div>
-              <div class="text-[10px] text-orange-300 font-bold">코드 [${c.code}] | 추가표: +${c.bonusVotes}개</div>
-              <div class="text-lg font-black text-white">${c.playerName} (${c.charName})</div>
-            </div>
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-1">
-          <div class="text-xs font-bold text-purple-300">📖 캐릭터 배경</div>
-          <p class="text-xs text-gray-200 leading-relaxed">${c.charDesc}</p>
-        </div>
-        <div class="bg-red-950/30 border border-red-500/40 rounded-2xl p-4 space-y-1.5">
-          <div class="text-xs font-black text-red-300">${c.secretTitle}</div>
-          <p class="text-xs text-gray-200 leading-relaxed whitespace-pre-line">${c.secretDesc}</p>
-        </div>
-      `;
-
-      if (st.id === 'STAGE_VOTE_10PM') {
-        const otherPlayers = Object.values(appData.cards).filter(p => p.playerName && p.playerName !== c.playerName);
-        html += `
-          <div class="bg-red-950/60 border-2 border-red-500/60 rounded-2xl p-4 space-y-3">
-            <div class="text-xs font-black text-red-300">⚖️ 처형대 투표</div>
-            <select id="voteTargetSelect" class="w-full bg-black border border-red-500/50 rounded-xl px-3 py-2 text-white font-bold text-xs">
-              <option value="">-- 처형할 대상 선택 --</option>
-              ${otherPlayers.map(p => `<option value="${p.playerName}" ${c.votedFor === p.playerName ? 'selected' : ''}>${p.charIcon} ${p.playerName} (${p.charName})</option>`).join('')}
-            </select>
-            <button onclick="submitVote('${c.code}')" class="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-xs shadow-lg">
-              🗳️ 최종 투표 제출하기
-            </button>
-            ${c.votedFor ? `<div class="text-center text-xs text-emerald-400 font-bold">✔️ 투표 완료: [${c.votedFor}] 지목됨</div>` : ''}
-          </div>
-        `;
-      }
-      document.getElementById('mobileCardContent').innerHTML = html;
+      document.getElementById('mobileCardContent').innerHTML = `<div class="bg-purple-950 p-4 rounded-xl text-white font-bold">${c.charIcon} ${c.playerName} (${c.charName})<br><span class="text-xs text-orange-300">${c.secretTitle}</span></div>`;
     }
-
-    function submitVote(code) {
-      const target = document.getElementById('voteTargetSelect').value;
-      if (!target) { alert('투표할 상대를 선택하세요!'); return; }
-      saveHistory();
-      appData.cards[code].votedFor = target;
-      syncSave();
-      renderAll();
-      alert(`[${target}]님에게 투표가 완료되었습니다!`);
-    }
-
-    function prevStage() { if (appData.state.stageIdx > 0) { saveHistory(); appData.state.stageIdx--; syncSave(); renderAll(); } }
-    function nextStage() { if (appData.state.stageIdx < STAGES.length - 1) { saveHistory(); appData.state.stageIdx++; syncSave(); renderAll(); } }
-    function jumpToStage(idx) { saveHistory(); appData.state.stageIdx = idx; syncSave(); renderAll(); }
 
     function renderAdminRemote() {
       const st = STAGES[appData.state.stageIdx];
-      document.getElementById('remoteCurrentStageLabel').innerText = `현재 TV: [${st.time}] ${st.title}`;
+      document.getElementById('remoteCurrentStageLabel').innerText = `현재 화면: ${st.title}`;
       document.getElementById('remoteStageList').innerHTML = STAGES.map((s, idx) => `
-        <button onclick="jumpToStage(${idx})" class="p-2.5 rounded-xl border text-left transition ${idx === appData.state.stageIdx ? 'bg-orange-600 border-orange-400 text-white font-black' : 'bg-gray-900 border-gray-800 text-gray-300'}">
-          <div class="text-[10px] opacity-75">${s.time}</div>
-          <div class="truncate">${s.title}</div>
+        <button onclick="jumpToStage(${idx})" class="p-2 rounded border text-left ${idx === appData.state.stageIdx ? 'bg-orange-600 text-white font-black' : 'bg-gray-900 text-gray-300'}">
+          <div class="text-[9px] opacity-75">${s.time}</div><div class="truncate">${s.title}</div>
         </button>
       `).join('');
-
-      const regs = Object.values(appData.cards).filter(c => c.playerName);
-      document.getElementById('remoteGameManager').innerHTML = regs.map(p => `
-        <div class="bg-black/50 border border-gray-800 rounded-xl p-2.5 flex items-center justify-between text-xs">
-          <div class="font-bold text-white">${p.charIcon} ${p.playerName} (${p.charName})</div>
-          <div class="flex items-center gap-1.5">
-            <span class="text-orange-400 font-bold">${p.score}점 | 표:+${p.bonusVotes}</span>
-            <button onclick="addScore('${p.code}', 10)" class="px-2 py-1 bg-purple-800 hover:bg-purple-700 text-white rounded font-bold">+10점</button>
-            <button onclick="grantBonusVote('${p.code}')" class="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold">+표1개</button>
-          </div>
-        </div>
-      `).join('') || `<div class="text-xs text-gray-500 text-center py-2">등록된 참가자가 없습니다.</div>`;
     }
 
-    function addScore(code, pts) { saveHistory(); appData.cards[code].score += pts; syncSave(); renderAll(); }
-    function grantBonusVote(code) { saveHistory(); appData.cards[code].bonusVotes++; syncSave(); renderAll(); alert(`추가표 부여 완료!`); }
     function seedAllDemoPlayers() {
       saveHistory();
-      const samples = { 'N3611': '박유령', 'G7420': '최광기', 'T5780': '김인간', 'M2491': '이생존', 'B8312': '정용감' };
-      Object.entries(samples).forEach(([code, name]) => { appData.cards[code].playerName = name; });
-      syncSave(); renderAll(); alert('5명 등록 완료!');
+      appData.cards['N3611'].playerName = '박유령';
+      appData.cards['G7420'].playerName = '최광기';
+      appData.cards['T5780'].playerName = '김인간';
+      syncSave();
+      alert('테스트 플레이어 등록 완료!');
     }
 
     function renderAll() {
-      renderTV();
-      if (activeMobileCode) renderMobileCard();
-      if (isAdminUnlocked) renderAdminRemote();
+      const hash = window.location.hash.replace('#', '') || 'tv';
+      if (hash === 'tv') renderTV();
+      if (hash === 'admin') renderAdminRemote();
+      if (hash === 'mobile' && activeMobileCode) renderMobileCard();
     }
 
-    syncLoad();
-    renderAll();
+    // 초기 실행 시 해시값 체크
+    if (!window.location.hash) {
+      window.location.hash = 'tv';
+    } else {
+      routeView();
+    }
   </script>
 </body>
 </html>
