@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>할로윈 저승문 봉인 작전 — 최종 마스터 플랜 & 게임 엔진</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; background-color: #0b0914; color: #f3f4f6; }
+    .glow-orange { box-shadow: 0 0 20px rgba(249, 115, 22, 0.35); }
+    .glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.35); }
+    .poster-blur-3 { filter: blur(18px) grayscale(60%) contrast(140%); transform: scale(1.6); }
+    .poster-blur-2 { filter: blur(8px) grayscale(30%) contrast(120%); transform: scale(1.25); }
+    .poster-blur-1 { filter: blur(3px); transform: scale(1.08); }
+    .poster-blur-0 { filter: blur(0px); transform: scale(1); }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- 상단 헤더 -->
+  <header class="border-b border-orange-900/50 bg-[#120e21]/90 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🎃</span>
+        <div>
+          <h1 class="text-xl font-black text-orange-400 tracking-tight">HALLOWEEN: 저승문 봉인 작전 (Final Lean Ver.)</h1>
+          <p class="text-xs text-gray-400">유령 1 · 미치광이 1 · 인간 N | 기본 2표 + 보너스 3장 | 미니게임 생성기 내장</p>
+        </div>
+      </div>
+      <nav class="flex gap-2 text-sm font-bold">
+        <a href="#rules" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-orange-600 transition">1. 최종 룰 & 역할</a>
+        <a href="#voting" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-orange-600 transition">2. 투표 시뮬레이터</a>
+        <a href="#minigames" class="px-3 py-1.5 rounded-lg bg-purple-900/80 border border-purple-500 hover:bg-purple-700 transition">3. 미니게임 생성 & 플레이어</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-8 space-y-12">
+
+    <!-- SECTION 1: 최종 압축 룰 & 캐릭터 3종 -->
+    <section id="rules" class="space-y-6">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+          <span>📜</span> 1. 초경량(Lean) 최종 룰 & 캐릭터 3종
+        </h2>
+        <span class="text-xs px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/40 font-bold">설명 1분 컷 · 스마트폰 입력 최소화</span>
+      </div>
+
+      <!-- 캐릭터 3종 카드 -->
+      <div class="grid md:grid-cols-3 gap-5">
+        <!-- 유령 -->
+        <div class="bg-[#17122a] border-2 border-red-500/60 rounded-2xl p-5 space-y-3 glow-orange">
+          <div class="flex justify-between items-start">
+            <span class="text-3xl">👻</span>
+            <span class="px-2.5 py-0.5 text-xs font-bold bg-red-900/60 text-red-300 rounded-full">1명 배정</span>
+          </div>
+          <h3 class="text-xl font-black text-red-400">유령 (Ghost)</h3>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            • <b>시야:</b> 누가 <b class="text-purple-300">미치광이</b>인지 알고 시작!<br>
+            • <b>미션:</b> 서로 다른 사람에게서 <b>5대 약점</b> 중 4개 이상 수집해 기록하기.<br>
+            • <b>특징:</b> 3R 팀전 승리 시 검증기에서 <span class="text-red-400 font-bold">'유령 반응'</span>이 뜸.
+          </p>
+          <div class="pt-2 border-t border-gray-800 text-xs font-bold text-red-300">
+            🏆 승리: 약점 4개 달성 OR 최종 처형대(상위 2명)에 안 뽑히고 생존!
+          </div>
+        </div>
+
+        <!-- 미치광이 -->
+        <div class="bg-[#17122a] border-2 border-purple-500/60 rounded-2xl p-5 space-y-3 glow-purple">
+          <div class="flex justify-between items-start">
+            <span class="text-3xl">🤪</span>
+            <span class="px-2.5 py-0.5 text-xs font-bold bg-purple-900/60 text-purple-300 rounded-full">1명 배정</span>
+          </div>
+          <h3 class="text-xl font-black text-purple-400">미치광이 (Madman)</h3>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            • <b>시야:</b> 유령이 누군지, 유령 미션이 뭔지 <b>전혀 모름!</b><br>
+            • <b>플레이:</b> 본인이 유령인 척 이상한 질문을 던지고 트롤링하여 의심을 사야 함.<br>
+            • <b>특징:</b> 몸은 인간이라 3R 팀 검증기에서 <span class="text-emerald-400 font-bold">'인간(클린)'</span>으로 판정!
+          </p>
+          <div class="pt-2 border-t border-gray-800 text-xs font-bold text-purple-300">
+            🏆 승리: 최종 투표 처형대(상위 2명) 안에 본인이 포함되면 즉시 단독 압승!
+          </div>
+        </div>
+
+        <!-- 일반 인간 -->
+        <div class="bg-[#17122a] border-2 border-emerald-500/60 rounded-2xl p-5 space-y-3">
+          <div class="flex justify-between items-start">
+            <span class="text-3xl">🎃</span>
+            <span class="px-2.5 py-0.5 text-xs font-bold bg-emerald-900/60 text-emerald-300 rounded-full">4~6명 배정</span>
+          </div>
+          <h3 class="text-xl font-black text-emerald-400">인간 생존자 (Humans)</h3>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            • <b>시야:</b> 본인이 선량한 인간이라는 것만 앎.<br>
+            • <b>플레이:</b> 미니게임에서 우승해 <b>보너스 투표권(+1표)</b>과 <b>힌트/정화</b>를 획득.<br>
+            • <b>핵심:</b> 미치광이의 가짜 어그로를 걸러내고 진짜 유령만 타격해야 함!
+          </p>
+          <div class="pt-2 border-t border-gray-800 text-xs font-bold text-emerald-300">
+            🏆 승리: 최종 처형대(상위 2명)에 [유령 O + 미치광이 X]를 올리면 승리!
+          </div>
+        </div>
+      </div>
+
+      <!-- 5대 약점 슬롯 요약 -->
+      <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-5">
+        <h4 class="text-sm font-bold text-orange-400 mb-3">📓 유령이 수집해야 하는 『5대 인간 약점 카테고리』 (사람·카테고리 중복 불가)</h4>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-xs">
+          <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+            <div class="text-xl mb-1">🎬</div>
+            <div class="font-bold text-white">무섭게 본 콘텐츠</div>
+            <div class="text-gray-400 mt-1">영화·드라마·웹툰 등</div>
+          </div>
+          <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+            <div class="text-xl mb-1">👻</div>
+            <div class="font-bold text-white">악몽/기괴한 경험</div>
+            <div class="text-gray-400 mt-1">가위눌림·귀신·악몽</div>
+          </div>
+          <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+            <div class="text-xl mb-1">🤬</div>
+            <div class="font-bold text-white">최근 열받았던 일</div>
+            <div class="text-gray-400 mt-1">스트레스·분노 사건</div>
+          </div>
+          <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+            <div class="text-xl mb-1">🤢</div>
+            <div class="font-bold text-white">절대 못 먹는 음식</div>
+            <div class="text-gray-400 mt-1">오이·고수·굴 등 기피</div>
+          </div>
+          <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700">
+            <div class="text-xl mb-1">🕷️</div>
+            <div class="font-bold text-white">싫어하는 생물체</div>
+            <div class="text-gray-400 mt-1">벌레·파충류·동물 등</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: 황금 밸런스 투표 & 무효표 시뮬레이터 -->
+    <section id="voting" class="space-y-6">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+          <span>⚖️</span> 2. 최종 심판 투표 & 무효표 자동 정산 시뮬레이터
+        </h2>
+        <span class="text-xs text-gray-400">기본 2표 + 보너스 3장(코스튬·1R·2R) | 유령·미치광이 표는 0표 처리</span>
+      </div>
+
+      <div class="grid md:grid-cols-12 gap-6 bg-[#141024] border border-gray-800 rounded-2xl p-6">
+        <div class="md:col-span-5 space-y-4">
+          <h3 class="font-bold text-orange-400 text-sm">🏆 보너스 투표권(+1표) 배정 테스트</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            만약 유령이나 미치광이가 미니게임을 이겨서 보너스 표를 가져가면, <b>그 표 역시 최종 집계에서 무효화(증발)</b>되어 인간 팀의 유효표가 줄어드는 사보타주 효과가 발생합니다!
+          </p>
+
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center justify-between bg-gray-900 p-2.5 rounded-lg">
+              <span>🏅 베스트 코스튬 (+1표)</span>
+              <select id="bonus1" onchange="updateVoteSim()" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white">
+                <option value="human">일반 인간이 획득</option>
+                <option value="ghost">유령이 획득 (무효화됨!)</option>
+                <option value="madman">미치광이가 획득 (무효화됨!)</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between bg-gray-900 p-2.5 rounded-lg">
+              <span>🎬 1R 포스터 퀴즈 1등 (+1표)</span>
+              <select id="bonus2" onchange="updateVoteSim()" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white">
+                <option value="human">일반 인간이 획득</option>
+                <option value="ghost">유령이 획득 (무효화됨!)</option>
+                <option value="madman">미치광이가 획득 (무효화됨!)</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between bg-gray-900 p-2.5 rounded-lg">
+              <span>🎧 2R 호러 가사 퀴즈 1등 (+1표)</span>
+              <select id="bonus3" onchange="updateVoteSim()" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white">
+                <option value="human">일반 인간이 획득</option>
+                <option value="ghost">유령이 획득 (무효화됨!)</option>
+                <option value="madman">미치광이가 획득 (무효화됨!)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="votePoolStatus" class="p-3 rounded-xl bg-orange-950/40 border border-orange-500/40 text-xs space-y-1">
+            <!-- JS로 업데이트 -->
+          </div>
+        </div>
+
+        <div class="md:col-span-7 space-y-4 border-l border-gray-800 pl-0 md:pl-6">
+          <h3 class="font-bold text-purple-400 text-sm">🎯 최종 처형대(상위 2명) 결과 판정기</h3>
+          <p class="text-xs text-gray-400">인간들의 유효표 집계 결과, 가장 표를 많이 받은 <b>상위 2명(1·2등)</b>에 누가 올랐는지 선택해 보세요.</p>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-gray-900 p-3 rounded-xl border border-gray-700">
+              <div class="text-gray-400 mb-1 font-bold">득표 1위 (처형대 #1)</div>
+              <select id="rank1" onchange="judgeWinner()" class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white font-bold">
+                <option value="ghost">👻 진짜 유령</option>
+                <option value="madman">🤪 미치광이</option>
+                <option value="human1">🎃 억울한 인간 A</option>
+              </select>
+            </div>
+            <div class="bg-gray-900 p-3 rounded-xl border border-gray-700">
+              <div class="text-gray-400 mb-1 font-bold">득표 2위 (처형대 #2)</div>
+              <select id="rank2" onchange="judgeWinner()" class="w-full bg-gray-800 border border-gray-600 rounded p-2 text-white font-bold">
+                <option value="human1" selected>🎃 억울한 인간 A</option>
+                <option value="madman">🤪 미치광이</option>
+                <option value="ghost">👻 진짜 유령</option>
+                <option value="human2">🎃 억울한 인간 B</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="judgeResultBox" class="p-4 rounded-xl border-2 text-center space-y-2 transition-all">
+            <!-- JS로 업데이트 -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: 미니게임 생성 가이드 & 실시간 플레이어 데모 -->
+    <section id="minigames" class="space-y-8">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+          <span>🎮</span> 3. 할로윈 미니게임 생성기 & 실전 TV 플레이어 데모
+        </h2>
+        <span class="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold">실제 소리 & 블러 해금 작동</span>
+      </div>
+
+      <!-- 1R: AI 호러 포스터 퀴즈 -->
+      <div class="bg-[#161226] border border-gray-800 rounded-2xl p-6 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-bold text-orange-400">1라운드 (19:30) — 우승 보상: 보너스 투표권(+1표) & 유령 약점 카테고리 1개 폭로</span>
+            <h3 class="text-xl font-black text-white mt-0.5">🎬 게임 1: 『저주받은 명작 (AI 호러 포스터 맞히기)』</h3>
+          </div>
+          <button onclick="copyPrompt()" class="text-xs px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-lg transition">
+            📋 AI 포스터 생성 프롬프트 복사하기
+          </button>
+        </div>
+
+        <div class="grid md:grid-cols-12 gap-6 items-center">
+          <!-- 포스터 뷰어 (블러/줌인 단계별 해금) -->
+          <div class="md:col-span-5 flex flex-col items-center">
+            <div class="w-64 h-80 rounded-xl overflow-hidden border-2 border-orange-500/50 bg-black relative flex items-center justify-center">
+              <div id="posterCanvas" class="w-full h-full flex flex-col items-center justify-center text-center p-4 transition-all duration-500 poster-blur-3 bg-gradient-to-b from-slate-900 via-red-950 to-black">
+                <div id="posterEmoji" class="text-7xl mb-3">🍑🏡🪨👀</div>
+                <div id="posterDesc" class="text-xs text-gray-300 font-medium leading-relaxed">
+                  반지하 창문 밖을 내다보는 해골 가족들과<br>썩은 호박을 들고 서 있는 유령 가정부
+                </div>
+              </div>
+              <div id="posterStageBadge" class="absolute top-2 left-2 px-2.5 py-1 bg-black/80 text-orange-400 text-xs font-bold rounded">
+                단계 1: 400% 블러 확대
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-3">
+              <button onclick="setPosterBlur(3)" class="px-2.5 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded">1단계(최대블러)</button>
+              <button onclick="setPosterBlur(2)" class="px-2.5 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded">2단계</button>
+              <button onclick="setPosterBlur(1)" class="px-2.5 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded">3단계</button>
+              <button onclick="setPosterBlur(0)" class="px-2.5 py-1 text-xs bg-orange-600 hover:bg-orange-500 font-bold rounded">정답 공개(선명)</button>
+            </div>
+          </div>
+
+          <!-- 문제 선택 및 생성 가이드 -->
+          <div class="md:col-span-7 space-y-3">
+            <p class="text-xs text-gray-300 leading-relaxed">
+              💡 <b>실전 활용법:</b> ChatGPT(DALL-E)나 Midjourney로 뽑은 이미지 파일 경로(`src`)만 넣으면, 아래처럼 <b>처음엔 흐릿하게 확대되어 있다가 단계별로 선명해지는 TV 퀴즈 화면</b>으로 바로 작동합니다!
+            </p>
+            <div class="grid grid-cols-2 gap-2 text-xs" id="posterQuizList">
+              <!-- JS로 렌더링 -->
+            </div>
+            <div id="posterAnswerBox" class="p-3 bg-gray-900 rounded-xl border border-gray-700 text-xs text-center font-bold text-gray-400">
+              위의 문제를 클릭하고 [정답 공개] 버튼을 눌러보세요!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2R: 강령술의 라디오 (실제 호러 BGM + TTS 낭독기) -->
+      <div class="bg-[#161226] border border-purple-500/40 rounded-2xl p-6 space-y-5 glow-purple">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-bold text-purple-400">2라운드 (20:30) — 우승 보상: 보너스 투표권(+1표) & 유령이 채운 약점 슬롯 1개 파괴!</span>
+            <h3 class="text-xl font-black text-white mt-0.5">🎧 게임 2: 『강령술의 라디오 (호러 BGM + 저주의 가사 낭독기)』</h3>
+          </div>
+          <span class="text-xs bg-red-900/60 text-red-200 px-3 py-1 rounded-full font-bold animate-pulse">🔊 스피커 볼륨을 켜고 버튼을 눌러보세요!</span>
+        </div>
+
+        <p class="text-xs text-gray-300 leading-relaxed">
+          별도의 음원 편집 없이 <b>브라우저의 Web Audio API(실시간 호러 오르골 합성)</b>와 <b>Web Speech API(저음·저속 음성 변조)</b>를 결합한 실전 플레이어입니다. 원하는 노래 가사만 추가하면 그 자리에서 바로 문제로 출제됩니다!
+        </p>
+
+        <div class="grid md:grid-cols-12 gap-6">
+          <!-- 문제 리스트 -->
+          <div class="md:col-span-6 space-y-2" id="lyricQuizList">
+            <!-- JS로 렌더링 -->
+          </div>
+
+          <!-- 컨트롤 패널 & 커스텀 가사 테스트 -->
+          <div class="md:col-span-6 bg-gray-900/90 border border-gray-800 rounded-xl p-4 flex flex-col justify-between space-y-4">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-purple-300">🎙️ 실시간 저주 낭독 컨트롤러</span>
+                <button onclick="stopHorrorAudio()" class="text-xs px-2.5 py-1 bg-red-800 hover:bg-red-700 rounded text-white font-bold">⏹ 정지</button>
+              </div>
+
+              <textarea id="customLyricInput" rows="3" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-2.5 text-xs text-gray-200" placeholder="여기에 아무 노래 가사나 적고 아래 [낭독 시작]을 누르면 호러 음악과 함께 기괴한 목소리로 읽어줍니다!">내가... 만든... 쿠키... 너를... 위해... 구웠지... 하지만... 너는... 가끔... 내... 생각만... 해...</textarea>
+
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="text-gray-400 block mb-1">목소리 기괴도 (Pitch: <span id="pitchVal">0.1</span>)</label>
+                  <input type="range" id="pitchRange" min="0.1" max="1.0" step="0.1" value="0.1" oninput="document.getElementById('pitchVal').innerText=this.value" class="w-full">
+                </div>
+                <div>
+                  <label class="text-gray-400 block mb-1">낭독 속도 (Rate: <span id="rateVal">0.65</span>)</label>
+                  <input type="range" id="rateRange" min="0.4" max="1.2" step="0.05" value="0.65" oninput="document.getElementById('rateVal').innerText=this.value" class="w-full">
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <button onclick="playCustomLyric()" class="w-full py-3 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-black rounded-xl text-sm shadow-lg transition">
+                👻 호러 BGM + 저주의 가사 낭독 시작!
+              </button>
+              <div id="lyricAnswerDisplay" class="text-center text-xs text-gray-400 font-bold py-1">
+                좌측 문제의 [▶ 재생]을 누르면 가사가 블라인드 상태로 낭독됩니다.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    // --- 1. 투표 & 승패 시뮬레이터 로직 ---
+    function updateVoteSim() {
+      const b1 = document.getElementById('bonus1').value;
+      const b2 = document.getElementById('bonus2').value;
+      const b3 = document.getElementById('bonus3').value;
+
+      let humanBonus = 0;
+      let wastedBonus = 0;
+      [b1, b2, b3].forEach(v => {
+        if (v === 'human') humanBonus++;
+        else wastedBonus++;
+      });
+
+      const baseHumanVotes = 10; // 인간 5명 x 2표
+      const totalValidVotes = baseHumanVotes + humanBonus;
+
+      document.getElementById('votePoolStatus').innerHTML = `
+        <div class="font-bold text-orange-300">📊 유효 투표권 정산 결과 (7인 기준: 인간 5명)</div>
+        <div>• 인간 기본 유효표: <b>10표</b> (5명 × 2표)</div>
+        <div>• 인간 획득 보너스 표: <b class="text-emerald-400">+${humanBonus}표</b></div>
+        <div>• 유령/미치광이가 뺏어 증발시킨 보너스 표: <b class="text-red-400">${wastedBonus}표 (자동 0표 처리!)</b></div>
+        <div class="pt-1 border-t border-orange-500/30 font-black text-white">👉 최종 개표에 반영되는 순수 유효표: 총 ${totalValidVotes}표</div>
+      `;
+    }
+
+    function judgeWinner() {
+      const r1 = document.getElementById('rank1').value;
+      const r2 = document.getElementById('rank2').value;
+      const box = document.getElementById('judgeResultBox');
+
+      if (r1 === r2) {
+        box.className = "p-4 rounded-xl border-2 border-gray-600 bg-gray-900 text-center space-y-1";
+        box.innerHTML = `<div class="text-sm font-bold text-gray-400">서로 다른 1위·2위 대상을 선택해 주세요.</div>`;
+        return;
+      }
+
+      const top2 = [r1, r2];
+      const hasGhost = top2.includes('ghost');
+      const hasMadman = top2.includes('madman');
+
+      if (hasMadman) {
+        box.className = "p-4 rounded-xl border-2 border-purple-500 bg-purple-950/50 text-center space-y-1";
+        box.innerHTML = `
+          <div class="text-lg font-black text-purple-300">🤪 미치광이 단독 승리! (인간 패배)</div>
+          <div class="text-xs text-gray-300">처형대 상위 2명 안에 <b>미치광이</b>가 포함되어 저주가 발동했습니다! (유령 포함 여부와 무관하게 미치광이의 어그로 대성공!)</div>
+        `;
+      } else if (hasGhost && !hasMadman) {
+        box.className = "p-4 rounded-xl border-2 border-emerald-500 bg-emerald-950/50 text-center space-y-1";
+        box.innerHTML = `
+          <div class="text-lg font-black text-emerald-300">🌕 인간 팀 완벽 승리! (저승문 봉인 완료)</div>
+          <div class="text-xs text-gray-300">미치광이의 함정을 완벽히 피하고 <b>진짜 유령</b>을 처형대에 올리는 데 성공했습니다!</div>
+        `;
+      } else {
+        box.className = "p-4 rounded-xl border-2 border-red-500 bg-red-950/50 text-center space-y-1";
+        box.innerHTML = `
+          <div class="text-lg font-black text-red-300">👻 유령 승리! (저승문 개방)</div>
+          <div class="text-xs text-gray-300">엄한 선량한 인간 2명만 처형대에 올랐습니다. 유령이 끝까지 정체를 숨기고 살아남았습니다!</div>
+        `;
+      }
+    }
+
+    // --- 2. 1R 포스터 퀴즈 데모 로직 ---
+    const posterQuizzes = [
+      { title: "기생충 (Parasite)", emoji: "🍑🏡🪨👀", desc: "반지하 창문 밖을 내다보는 해골 가족들과 썩은 호박을 들고 서 있는 유령 가정부", prompt: "A creepy Halloween horror movie poster parody of Parasite (2019), skeleton family looking out a semi-basement window, black censor bars over eyes, eerie green rain, no text --ar 3:4" },
+      { title: "겨울왕국 (Frozen)", emoji: "❄️🧟‍♀️⛄🏰", desc: "얼음 성 계단 위에서 푸른 안광을 빛내며 해골 눈사람과 함께 저주 마법을 부리는 마녀 여왕", prompt: "A dark gothic horror movie poster reimagining Frozen, an undead ice witch queen on dark crystal stairs with a creepy skeleton snowman, Tim Burton style, no text --ar 3:4" },
+      { title: "선재 업고 튀어", emoji: "☂️🧛‍♂️🏃‍♀️🕯️", desc: "비 오는 밤 공동묘지 앞에서 찢어진 검은 박쥐 우산을 쓰고 뱀파이어 소년에게 달려가는 유령 소녀", prompt: "A gothic Halloween romance horror poster, a ghost girl holding a torn yellow bat-umbrella running towards a tall vampire boy in the rain at night, eerie glowing streetlamp, no text --ar 3:4" },
+      { title: "슬램덩크 (Slam Dunk)", emoji: "🎃🏀🧟‍♂️🔥", desc: "피 묻은 코트 위에서 불타는 잭오랜턴(호박 머리)을 농구공처럼 들고 덩크슛을 꽂는 붉은 머리 좀비", prompt: "A dark Halloween horror sports poster, a red-haired zombie basketball player dunking a glowing jack-o-lantern pumpkin into a hoop on a foggy graveyard court, no text --ar 3:4" }
+    ];
+    let currentPosterIdx = 0;
+
+    function renderPosterList() {
+      const container = document.getElementById('posterQuizList');
+      container.innerHTML = posterQuizzes.map((q, idx) => `
+        <button onclick="selectPoster(${idx})" class="p-2.5 rounded-lg border text-left transition ${idx === currentPosterIdx ? 'bg-orange-950/60 border-orange-500 text-white' : 'bg-gray-900 border-gray-800 text-gray-300 hover:border-gray-600'}">
+          <div class="font-bold text-orange-300">문제 #${idx + 1} 선택</div>
+          <div class="text-[11px] text-gray-400 truncate mt-0.5">${q.desc}</div>
+        </button>
+      `).join('');
+    }
+
+    function selectPoster(idx) {
+      currentPosterIdx = idx;
+      const q = posterQuizzes[idx];
+      document.getElementById('posterEmoji').innerText = q.emoji;
+      document.getElementById('posterDesc').innerText = q.desc;
+      setPosterBlur(3);
+      document.getElementById('posterAnswerBox').innerText = `문제 #${idx + 1} 진행 중 — 단계별 힌트를 열어보세요!`;
+      renderPosterList();
+    }
+
+    function setPosterBlur(level) {
+      const canvas = document.getElementById('posterCanvas');
+      const badge = document.getElementById('posterStageBadge');
+      canvas.className = `w-full h-full flex flex-col items-center justify-center text-center p-4 transition-all duration-500 bg-gradient-to-b from-slate-900 via-red-950 to-black poster-blur-${level}`;
+      if (level === 3) badge.innerText = "단계 1: 400% 블러 확대";
+      if (level === 2) badge.innerText = "단계 2: 윤곽 힌트";
+      if (level === 1) badge.innerText = "단계 3: 결정적 힌트";
+      if (level === 0) {
+        badge.innerText = "🎉 정답 공개!";
+        document.getElementById('posterAnswerBox').innerHTML = `<span class="text-orange-400">정답: 『 ${posterQuizzes[currentPosterIdx].title} 』</span>`;
+      }
+    }
+
+    function copyPrompt() {
+      const promptText = posterQuizzes[currentPosterIdx].prompt;
+      navigator.clipboard.writeText(promptText);
+      alert("현재 선택된 문제의 영문 AI 이미지 생성 프롬프트가 복사되었습니다!\n\n" + promptText);
+    }
+
+    // --- 3. 2R 호러 BGM 합성기 + 저주의 TTS 낭독기 ---
+    const lyricQuizzes = [
+      { id: 1, title: "뉴진스 - Cookie", lyric: "내가... 만든... 쿠키... 너를... 위해... 구웠지... 하지만... 너는... 가끔... 내... 생각만... 해... 목이... 타잖아..." },
+      { id: 2, title: "샤이니 - Ring Ding Dong", lyric: "링... 딩... 동... 링... 딩... 동... 링... 디기... 딩... 디기... 딩... 딩... 동... 너란... 소녀... 머릿속이... 울려..." },
+      { id: 3, title: "로제 & 브루노 마스 - APT.", lyric: "아파트... 아파트... 아파트... 아파트... 잠깐만... 나를... 저기... 아파트에서... 만나... 건배... 건배..." },
+      { id: 4, title: "싸이 - 강남스타일", lyric: "낮에는... 따사로운... 인간적인... 여자... 커피... 한잔의... 여유를... 아는... 품격... 있는... 여자... 밤이... 오면... 심장이... 뜨거워지는... 여자..." },
+      { id: 5, title: "(여자)아이들 - 나는 아픈 건 딱 질색이니까", lyric: "오늘도... 아침에... 입에... 빵을... 물고... 똑같이... 하루를... 시작하고... 나는... 아픈... 건... 딱... 질색이니까..." }
+    ];
+
+    let audioCtx = null;
+    let horrorInterval = null;
+
+    function renderLyricList() {
+      const container = document.getElementById('lyricQuizList');
+      container.innerHTML = lyricQuizzes.map((q, idx) => `
+        <div class="flex items-center justify-between bg-gray-900 border border-gray-800 p-3 rounded-xl text-xs">
+          <div>
+            <span class="font-bold text-purple-300">트랙 #${idx + 1}</span>
+            <span class="text-gray-400 ml-2">(가사 블라인드 출제)</span>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="playQuizTrack(${idx})" class="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg">▶ 저주 낭독 재생</button>
+            <button onclick="revealLyricAnswer(${idx})" class="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg">정답 보기</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function startHorrorBGM() {
+      stopHorrorAudio();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // 기괴한 저음 드론 사운드
+      const droneOsc = audioCtx.createOscillator();
+      const droneGain = audioCtx.createGain();
+      droneOsc.type = 'sawtooth';
+      droneOsc.frequency.value = 55; // 낮은 A 음
+      droneGain.gain.value = 0.04;
+      droneOsc.connect(droneGain);
+      droneGain.connect(audioCtx.destination);
+      droneOsc.start();
+
+      // 음산한 단조 오르골 멜로디 루프
+      const creepyNotes = [440, 466.16, 523.25, 466.16, 392, 349.23, 329.63];
+      let step = 0;
+      horrorInterval = setInterval(() => {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = creepyNotes[step % creepyNotes.length];
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.55);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+        step++;
+      }, 600);
+    }
+
+    function stopHorrorAudio() {
+      if (horrorInterval) clearInterval(horrorInterval);
+      if (audioCtx) {
+        audioCtx.close();
+        audioCtx = null;
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function speakCreepyText(text) {
+      startHorrorBGM();
+      if (!('speechSynthesis' in window)) {
+        alert("현재 브라우저에서 음성 합성을 지원하지 않습니다.");
+        return;
+      }
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ko-KR';
+      utter.pitch = parseFloat(document.getElementById('pitchRange').value);
+      utter.rate = parseFloat(document.getElementById('rateRange').value);
+      utter.onend = () => {
+        setTimeout(stopHorrorAudio, 1200);
+      };
+      window.speechSynthesis.speak(utter);
+    }
+
+    function playQuizTrack(idx) {
+      const q = lyricQuizzes[idx];
+      document.getElementById('customLyricInput').value = q.lyric;
+      document.getElementById('lyricAnswerDisplay').innerHTML = `<span class="text-purple-400 animate-pulse">👻 트랙 #${idx + 1} 저주의 가사 낭독 중... 무슨 노래일까요?</span>`;
+      speakCreepyText(q.lyric);
+    }
+
+    function revealLyricAnswer(idx) {
+      const q = lyricQuizzes[idx];
+      document.getElementById('lyricAnswerDisplay').innerHTML = `<span class="text-emerald-400">🎉 트랙 #${idx + 1} 정답: 『 ${q.title} 』</span>`;
+    }
+
+    function playCustomLyric() {
+      const text = document.getElementById('customLyricInput').value;
+      speakCreepyText(text);
+    }
+
+    // 초기 실행
+    updateVoteSim();
+    judgeWinner();
+    renderPosterList();
+    renderLyricList();
+  </script>
+</body>
+</html>
