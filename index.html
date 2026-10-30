@@ -10,11 +10,11 @@
   <style>
     body { font-family: 'Noto Sans KR', sans-serif; background-color: #040208; color: #f3f4f6; overflow-x: hidden; }
     .font-gothic { font-family: 'Cinzel', serif; }
-    @keyframes pulseGlow {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 0.8; }
+    @keyframes spookyPulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.03); }
     }
-    .anim-glow { animation: pulseGlow 4s ease-in-out infinite; }
+    .anim-spooky { animation: spookyPulse 6s ease-in-out infinite; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col" id="bodyRoot">
@@ -22,19 +22,17 @@
   <!-- =========================================================
        VIEW 1: 📺 거실 TV 전광판 화면 (#tv)
   ========================================================== -->
-  <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-[#05020a] min-h-screen">
-    
-    <!-- 백그라운드 영상 및 할로윈 무드 백업 레이어 -->
-    <div class="absolute inset-0 z-0 overflow-hidden bg-[#030106] flex items-center justify-center">
-      <video id="tvBackgroundVideo" autoplay loop muted playsinline class="w-full h-full object-cover opacity-80" onerror="this.style.display='none'">
+  <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-[#030106] min-h-screen">
+    <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
+      <video id="tvBackgroundVideo" autoplay loop muted playsinline class="w-full h-full object-cover opacity-80" onerror="this.style.display='none'; document.getElementById('fallbackBg').style.display='block';">
         <source src="assets/video/bg_ambient.webm" type="video/webm">
         <source src="video/bg_ambient.webm" type="video/webm">
+        <source src="./video/bg_ambient.webm" type="video/webm">
       </video>
-      <!-- 비디오 로딩 실패 시 나타나는 몽환적인 할로윈 앰비언트 백그라운드 -->
-      <div class="absolute inset-0 bg-gradient-to-b from-purple-950/40 via-black to-red-950/30 anim-glow pointer-events-none"></div>
+      <div id="fallbackBg" class="absolute inset-0 bg-gradient-to-b from-purple-950/60 via-black to-red-950/50 anim-spooky pointer-events-none" style="display:none;"></div>
+      <div class="absolute inset-0 bg-black/40 pointer-events-none"></div>
     </div>
 
-    <!-- 상단 헤더 -->
     <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/60 backdrop-blur-md">
       <div class="flex items-center gap-3">
         <span class="text-2xl">🕯️</span>
@@ -58,10 +56,8 @@
       </div>
     </div>
 
-    <!-- 중앙 컨텐츠 -->
     <div id="tvStageContainer" class="my-auto py-8 px-8 z-10 flex-1 flex items-center justify-center w-full"></div>
 
-    <!-- 하단 푸터 -->
     <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 z-10 bg-black/70 backdrop-blur-md">
       <div>🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div>
       <div class="text-orange-300 font-bold">HALLOWEEN SURVIVAL GAME 2026</div>
@@ -94,7 +90,7 @@
       <div class="bg-orange-950/60 border border-orange-500/40 rounded-2xl p-3 space-y-2">
         <div class="flex justify-between items-center">
           <h2 class="text-sm font-black text-white">📱 GM 리모컨 (TV 조종 패널)</h2>
-          <button onclick="seedAllDemoPlayers()" class="px-2 py-1 bg-emerald-700 text-white rounded text-[11px] font-bold">테스트 5명 등록</button>
+          <button onclick="seedAllDemoPlayers()" class="px-2 py-1 bg-emerald-700 text-white rounded text-[11px] font-bold">테스트 7명 일괄등록</button>
         </div>
         <div class="grid grid-cols-3 gap-2">
           <button onclick="prevStage()" class="py-2 bg-gray-800 text-white font-black rounded-xl text-xs">◀ 이전</button>
@@ -125,10 +121,15 @@
       { id: 'STAGE_MISSION_OPEN',time: '22:30', title: '진실의 방 — 결과 오픈' }
     ];
 
+    // 7인 체제 고정 캐릭터 세팅 (늑대인간=유령, 마녀=미치광이, 나머지 5인=인간)
     const INITIAL_CARDS = {
-      'N3611': { code: 'N3611', charIcon: '🐺', charName: '늑대인간', charDesc: '유령 역할입니다.', secretTitle: '👻 정체: [유령]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
-      'G7420': { code: 'G7420', charIcon: '🎭', charName: '광대', charDesc: '미치광이 역할입니다.', secretTitle: '🤪 정체: [미치광이]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
-      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', charDesc: '인간 생존자입니다.', secretTitle: '🎃 정체: [인간]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' }
+      'W3611': { code: 'W3611', charIcon: '🐺', charName: '늑대인간', charDesc: '보름달이 뜨면 감각이 예민해지는 은빛 늑대인간입니다.', secretTitle: '👻 당신의 진짜 정체: [유령]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'M7420': { code: 'M7420', charIcon: '🔮', charName: '마녀', charDesc: '비밀스러운 약초와 저주를 다루는 마녀입니다.', secretTitle: '🤪 당신의 진짜 정체: [미치광이]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', charDesc: '성수와 십자가로 악령을 쫓는 냉철한 퇴마사입니다.', secretTitle: '🎃 당신의 정체: [인간 생존자]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'K2491': { code: 'K2491', charIcon: '🧟', charName: '강시', charDesc: '부적이 붙은 채 저택을 떠도는 강시입니다.', secretTitle: '📜 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'B8312': { code: 'B8312', charIcon: '🧛', charName: '뱀파이어', charDesc: '고풍스러운 뱀파이어 귀족입니다.', secretTitle: '🍷 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'Z9154': { code: 'Z9154', charIcon: '💀', charName: '좀비', charDesc: '지하 감옥에서 탈출한 좀비입니다.', secretTitle: '⛓️ 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' },
+      'S4823': { code: 'S4823', charIcon: '⏳', charName: '사신', charDesc: '영혼의 무게를 재는 저승의 사신입니다.', secretTitle: '🖤 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0, bonusVotes: 0, votedFor: '' }
     };
 
     let appData = {
@@ -139,7 +140,6 @@
     let historyStack = [];
     let activeMobileCode = null;
 
-    // 초고속 로컬/클라우드 통합 싱크 엔진 (BroadcastChannel + Storage)
     const channel = new BroadcastChannel('halloween_sync_channel');
 
     function syncLoad() {
@@ -151,7 +151,7 @@
 
     function syncSave() {
       localStorage.setItem('halloween_party_data', JSON.stringify(appData));
-      channel.postMessage(appData); // 열려있는 모든 창(TV, 리모컨 등)에 즉시 방송
+      channel.postMessage(appData);
       renderAll();
     }
 
@@ -307,11 +307,13 @@
 
     function seedAllDemoPlayers() {
       saveHistory();
-      appData.cards['N3611'].playerName = '박유령';
-      appData.cards['G7420'].playerName = '최광기';
-      appData.cards['T5780'].playerName = '김인간';
+      const demoNames = ['철수', '영희', '민수', '지은', '동현', '서연', '현우'];
+      const keys = Object.keys(appData.cards);
+      keys.forEach((k, idx) => {
+        appData.cards[k].playerName = demoNames[idx];
+      });
       syncSave();
-      alert('테스트 플레이어 등록 완료!');
+      alert('테스트 플레이어 7명 일괄 등록 완료!');
     }
 
     function renderAll() {
@@ -321,7 +323,6 @@
       if (hash === 'mobile' && activeMobileCode) renderMobileCard();
     }
 
-    // 최초 로드
     syncLoad();
     if (!window.location.hash) {
       window.location.hash = 'tv';
