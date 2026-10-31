@@ -133,18 +133,15 @@
         <div id="adminScoreBoard" class="space-y-2"></div>
       </div>
 
-      <!-- 실시간 투표 모니터링 (집계 요약 + 상세 현황) -->
       <div class="bg-[#120d1d] border-2 border-red-500/50 rounded-2xl p-4 space-y-4">
         <div class="flex justify-between items-center border-b border-red-500/30 pb-2">
           <h3 class="text-sm font-black text-red-400">🗳️ 실시간 투표 모니터링</h3>
           <button onclick="resetVotes()" class="text-[10px] bg-red-900 px-2 py-1 rounded text-white">투표 초기화</button>
         </div>
-        <!-- 1. 전체 실시간 투표 집계 랭킹 -->
         <div class="bg-black/60 p-2 rounded-xl border border-red-500/30">
           <h4 class="text-[11px] font-bold text-red-300 mb-2">📊 전체 득표 순위 (유효/전체/무효)</h4>
           <div id="adminVoteRanking" class="space-y-1 text-[10px] text-gray-300"></div>
         </div>
-        <!-- 2. 개별 투표 현황 -->
         <div id="adminVoteStatus" class="space-y-2 text-[10px]"></div>
       </div>
 
@@ -176,7 +173,7 @@
       { id: 'STAGE_VOTE_10PM',      title: '[심판] 10시 최후의 심판', type: 'yt', vid: VID_BGM, sound: 'bell' },
       { id: 'STAGE_VOTE_QR',        title: '[투표] 투표/미션보고 접속QR', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_VOTE_RESULT_1',  title: '[결과 1] 최다 득표 1, 2위 사유 공개', type: 'yt', vid: VID_BGM },
-      { id: 'STAGE_VOTE_RESULT_2',  title: '[결과 2] 전체 정체 공개 및 승패 판정', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_VOTE_RESULT_2',  title: '[결과 2] 전체 정체 공개 및 심판대', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_VOTE_RESULT_3',  title: '[결과 3] 유령 미션 성공/실패 공개', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_VOTE_RESULT_4',  title: '[엔딩] 최종 진영 승패 확정', type: 'yt', vid: VID_BGM }
     ];
@@ -219,16 +216,16 @@
 
     function initTVAudio() { tvAudioInited = true; document.getElementById('tvStartOverlay').style.display = 'none'; applyAudioConfig(); renderTV(); }
     
-    // DB 버전 v12 격상 (집계 로직 및 렌더링 최적화 포함)
-    db.ref('halloween_state_v12').on('value', (snap) => {
+    // DB 버전 v13 적용
+    db.ref('halloween_state_v13').on('value', (snap) => {
       if (snap.val()) { appData = snap.val(); if(!appData.votes) appData.votes={}; if(!appData.mg1) appData.mg1={qIdx:0,showA:false}; }
-      else db.ref('halloween_state_v12').set(appData);
+      else db.ref('halloween_state_v13').set(appData);
       applyAudioConfig();
       renderTV(); renderAdminRemote();
       if(activeMobileCode) { const c = appData.cards[activeMobileCode]; const sEl = document.getElementById('mobileScoreSpan'); if (sEl && c) sEl.innerText = c.score; }
     });
     
-    function syncSave() { db.ref('halloween_state_v12').set(appData); }
+    function syncSave() { db.ref('halloween_state_v13').set(appData); }
     
     setInterval(() => { 
       const now = new Date();
@@ -256,7 +253,6 @@
     
     function getDisplayName(code) { const c = appData.cards[code]; return c && c.playerName ? `${c.charName}(${c.playerName})` : (c ? c.charName : '알수없음'); }
 
-    // 투표 집계 통합 로직 (유효/무효/사유 추출 포함)
     function getVoteResults() {
       let validCounts = {}; let invalidCounts = {}; let allReasons = {};
       Object.values(appData.cards).forEach(c => { 
@@ -357,7 +353,6 @@
                  <li><span class="text-red-400 font-bold">👻 유령 승리:</span> 1/2등을 피해 생존하고, 비밀 미션 완수 시 승리</li>
                  <li class="bg-red-900/50 p-3 rounded border border-red-500/30 text-red-200 mt-2 text-base">※ 단, <span class="font-bold text-white">유령과 미치광이의 표는</span> 결과에 집계되지 않습니다. (무효 처리)</li>
                  <li class="text-yellow-300 font-bold mt-4 text-base">🚫 극비: 재미를 위해 자신의 화면을 남에게 절대 보여주지 마세요!</li>
-                 <li class="text-yellow-300 font-bold mt-4 text-base"> (!) 코드는 대문자 알파벳 + 숫자 4자리 입니다. ex) A1234 </li>
                </ul>
             </div>
           </div>`;
@@ -446,19 +441,27 @@
         
         pArr.forEach(c => {
           let isTop1 = res.top1 && res.top1[0] === c.code; let isTop2 = res.top2 && res.top2[0] === c.code;
-          let badge = isTop1 ? `<div class="absolute -top-3 right-0 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-md">1위 심판대</div>` : (isTop2 ? `<div class="absolute -top-3 right-0 bg-orange-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-md">2위 심판대</div>` : '');
+          let badge = isTop1 ? `<div class="absolute -top-3 right-0 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-md z-10">1위 심판대</div>` : (isTop2 ? `<div class="absolute -top-3 right-0 bg-orange-600 text-white text-[10px] px-2 py-1 rounded font-bold shadow-md z-10">2위 심판대</div>` : '');
           
-          let tImg = c.code; let tName = "🎃 인간 생존자"; let border = "border-gray-500"; let bg = "bg-gray-800/80";
-          if (c.isGhost) { tImg = "U0000"; tName = "👻 진짜 유령"; border = "border-purple-500"; bg = "bg-purple-900/90"; }
-          if (c.isMadman) { tImg = "U0001"; tName = "🤪 진짜 미치광이"; border = "border-pink-500"; bg = "bg-pink-900/90"; }
+          let tName = "🎃 인간 생존자"; let border = "border-gray-500"; let bg = "bg-gray-800/80";
+          let imgHtml = `<img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="w-20 h-20 mx-auto rounded-full object-cover mb-2 border-2 ${border}">`;
+
+          if (c.isGhost) { 
+              tName = "👻 진짜 유령"; border = "border-purple-500"; bg = "bg-purple-900/90"; 
+              imgHtml = `<div class="flex items-center justify-center gap-1 mb-2"><img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="w-12 h-12 rounded-full object-cover border-2 border-gray-500 opacity-60"><span class="text-[10px] text-purple-400">▶</span><img src="assets/characters/U0000.png" onerror="this.style.display='none'" class="w-20 h-20 rounded-full object-cover border-2 ${border}"></div>`;
+          }
+          if (c.isMadman) { 
+              tName = "🤪 진짜 미치광이"; border = "border-pink-500"; bg = "bg-pink-900/90"; 
+              imgHtml = `<div class="flex items-center justify-center gap-1 mb-2"><img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="w-12 h-12 rounded-full object-cover border-2 border-gray-500 opacity-60"><span class="text-[10px] text-pink-400">▶</span><img src="assets/characters/U0001.png" onerror="this.style.display='none'" class="w-20 h-20 rounded-full object-cover border-2 ${border}"></div>`;
+          }
 
           if(isTop1 || isTop2) border = "border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.8)]";
 
-          html += `<div class="relative ${bg} border-2 ${border} p-4 rounded-2xl text-center flex flex-col items-center">
+          html += `<div class="relative ${bg} border-2 ${border} p-4 rounded-2xl text-center flex flex-col items-center justify-center">
             ${badge}
-            <img src="assets/characters/${tImg}.png" onerror="this.src='assets/characters/${c.code}.png'" class="w-20 h-20 mx-auto rounded-full object-cover mb-2 border-2 ${border}">
+            ${imgHtml}
             <div class="font-bold text-white text-lg">${getDisplayName(c.code)}</div>
-            <div class="text-sm font-black text-white mt-2 bg-black/60 rounded px-2 py-1">${tName}</div>
+            <div class="text-sm font-black text-white mt-2 bg-black/60 rounded px-2 py-1 w-full">${tName}</div>
           </div>`;
         });
         html += `</div>`;
@@ -466,8 +469,9 @@
         let caughtGhost = res.isGhostExecuted;
         let caughtMadman = res.isMadmanExecuted;
 
-        if (caughtGhost) html += `<div class="text-3xl text-green-400 font-bold drop-shadow-md bg-black/60 p-4 rounded-2xl">🎉 인간 진영이 1/2위 심판대에서 유령을 색출해냈습니다!</div>`;
-        else if (caughtMadman) html += `<div class="text-3xl text-purple-400 font-bold drop-shadow-md bg-black/60 p-4 rounded-2xl">🎉 미치광이가 심판대에 올라 단독 승리 조건을 달성했습니다!</div>`;
+        if (caughtGhost && caughtMadman) html += `<div class="text-3xl text-yellow-400 font-bold drop-shadow-md bg-black/60 p-4 rounded-2xl">🎉 인간 진영이 유령을 색출하고 미치광이도 심판대에 올랐습니다!</div>`;
+        else if (caughtGhost) html += `<div class="text-3xl text-green-400 font-bold drop-shadow-md bg-black/60 p-4 rounded-2xl">🎉 인간 진영이 1/2위 심판대에서 유령을 색출해냈습니다!</div>`;
+        else if (caughtMadman) html += `<div class="text-3xl text-purple-400 font-bold drop-shadow-md bg-black/60 p-4 rounded-2xl">🎉 미치광이가 심판대에 올라 승리 조건을 달성했습니다!</div>`;
         else html += `<div class="text-3xl text-red-500 font-bold drop-shadow-md bg-black/60 p-4 rounded-2xl">🩸 무고한 인간들만 심판대에 올랐습니다... (유령 색출 실패)</div>`;
         
         box.innerHTML = html + `</div>`;
@@ -493,11 +497,11 @@
           rHtml = `<div class="col-span-3 text-center text-gray-400 text-2xl py-10 border border-gray-700 rounded-2xl bg-black/50">제출된 보고서가 없습니다. (자동 실패)</div>`; 
         }
         
-        let sucBadge = isSuccess ? `<div class="bg-green-600 text-white px-6 py-2 rounded-full font-black text-2xl inline-block mt-6 shadow-[0_0_15px_rgba(22,163,74,0.8)] animate-pulse">미션 성공</div>` : `<div class="bg-red-600 text-white px-6 py-2 rounded-full font-black text-2xl inline-block mt-6 shadow-[0_0_15px_rgba(220,38,38,0.8)]">미션 실패</div>`;
+        let sucBadge = isSuccess ? `<div class="bg-green-600 text-white px-6 py-2 rounded-full font-black text-2xl inline-block mt-6 shadow-[0_0_15px_rgba(22,163,74,0.8)] animate-pulse">약점 수집 미션 성공!</div>` : `<div class="bg-red-600 text-white px-6 py-2 rounded-full font-black text-2xl inline-block mt-6 shadow-[0_0_15px_rgba(220,38,38,0.8)]">미션 실패 (유령 패배 확정)</div>`;
         
         box.innerHTML = `<div class="bg-black/90 border-4 border-purple-600 rounded-3xl p-10 max-w-5xl w-full shadow-[0_0_50px_rgba(147,51,234,0.6)] anim-reveal-tension text-center">
           <h2 class="text-4xl font-black text-purple-400 mb-2">👻 늑대인간 [${gName}] 의</h2>
-          <h2 class="text-5xl font-black text-white mb-8">약점 수집 보고서 검토</h2>
+          <h2 class="text-5xl font-black text-white mb-8">비밀 약점 수집 보고서 검토</h2>
           <div class="grid grid-cols-3 gap-6">${rHtml}</div>
           ${sucBadge}
         </div>`;
@@ -508,10 +512,20 @@
         const isMissionSuccess = (gV && gV.reports && gV.reports.length === 3 && gV.reports.every(r => r.target && r.target !== 'FAIL' && r.text && r.text.trim() !== ''));
 
         let vicText = ""; let vicColor = "";
-        if (res.isMadmanExecuted) { vicText = "🤪 미치광이 단독 승리!<br><span class='text-3xl text-gray-300'>(인간/유령 모두 패배)</span>"; vicColor = "text-purple-400"; }
-        else if (res.isGhostExecuted) { vicText = "🎃 인간 진영 승리!<br><span class='text-3xl text-gray-300'>(유령 색출 성공)</span>"; vicColor = "text-green-400"; }
-        else if (isMissionSuccess) { vicText = "👻 유령 진영 최종 승리!<br><span class='text-3xl text-gray-300'>(심판 회피 & 미션 완수)</span>"; vicColor = "text-red-500"; }
-        else { vicText = "💀 모두의 패배...<br><span class='text-3xl text-gray-300'>(무고한 희생 & 유령 미션 실패)</span>"; vicColor = "text-gray-400"; }
+        
+        if (res.isGhostExecuted && res.isMadmanExecuted) {
+          vicText = "🎃🤪 인간 & 미치광이 동반 승리!<br><span class='text-3xl text-gray-300 mt-4 block'>(유령 색출 성공 & 미치광이 목적 달성)</span>"; vicColor = "text-yellow-400";
+        } else if (res.isGhostExecuted) {
+          vicText = "🎃 인간 진영 승리!<br><span class='text-3xl text-gray-300 mt-4 block'>(유령 색출 성공)</span>"; vicColor = "text-green-400";
+        } else if (res.isMadmanExecuted && isMissionSuccess) {
+          vicText = "👻🤪 유령 & 미치광이 동반 승리!<br><span class='text-3xl text-gray-300 mt-4 block'>(완벽한 농락 & 미션 완수)</span>"; vicColor = "text-red-400";
+        } else if (res.isMadmanExecuted && !isMissionSuccess) {
+          vicText = "🤪 미치광이 단독 승리!<br><span class='text-3xl text-gray-300 mt-4 block'>(유령은 미션 실패로 패배)</span>"; vicColor = "text-purple-400";
+        } else if (!res.isMadmanExecuted && isMissionSuccess) {
+          vicText = "👻 유령 단독 승리!<br><span class='text-3xl text-gray-300 mt-4 block'>(심판 회피 & 미션 완수)</span>"; vicColor = "text-red-500";
+        } else {
+          vicText = "💀 모두의 패배...<br><span class='text-3xl text-gray-300 mt-4 block'>(무고한 희생 & 유령 미션 실패)</span>"; vicColor = "text-gray-400";
+        }
 
         box.innerHTML = `<div class="flex flex-col items-center anim-reveal-tension"><div class="text-7xl mb-8">⚖️</div><div class="text-5xl font-black ${vicColor} drop-shadow-[0_0_30px_currentColor] bg-black/80 px-16 py-10 border-2 border-white/20 rounded-3xl text-center leading-normal">${vicText}</div></div>`;
       }
@@ -594,6 +608,7 @@
             ${isWinner ? '<br><span class="text-xs text-yellow-400 font-bold mt-1 inline-block">⭐ 미니게임 우승 혜택 (+1표) 적용!</span>' : ''}
           </div>
           ${selectsHTML}
+          ${c.code==='T5780'?'<div class="text-xs text-orange-400 mb-3 text-center">※ 퇴마사의 표는 집계되지 않지만 제출은 필수입니다.</div>':''}
           <button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded shadow-lg text-lg">투표 일괄 제출</button>`;
       }
     }
