@@ -16,9 +16,8 @@
     @keyframes spookyPulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.03); } }
     .anim-spooky { animation: spookyPulse 6s ease-in-out infinite; }
     .youtube-bg { pointer-events: none; transform: scale(1.3); width: 100%; height: 100%; }
-    
     @keyframes revealTension { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
-    .anim-reveal-tension { animation: revealTension 2s forwards; }
+    .anim-reveal-tension { animation: revealTension 1.5s forwards; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col" id="bodyRoot">
@@ -31,18 +30,24 @@
     <div id="tvStartOverlay" class="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center cursor-pointer" onclick="initTVAudio()">
       <div class="text-white text-3xl font-bold animate-pulse mb-4">📺 화면을 클릭하여 시스템과 사운드를 활성화하세요</div>
     </div>
+    
+    <!-- 배경 영상 영역 (유튜브 & 로컬 비디오 분기) -->
     <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
       <div id="tvYoutubeBg" class="youtube-bg"></div>
+      <video id="tvLocalVideo" src="assets/video/opening.mp4" class="w-full h-full object-cover hidden" loop playsinline></video>
       <div class="absolute inset-0 bg-gradient-to-b from-purple-950/60 via-black to-red-950/50 anim-spooky pointer-events-none"></div>
       <div class="absolute inset-0 bg-black/40 pointer-events-none"></div>
     </div>
+
     <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/60 backdrop-blur-md hidden">
       <div class="flex items-center gap-3"><span class="text-2xl">🕯️</span>
         <div><div class="text-[10px] text-orange-400 font-bold uppercase">LIVING ROOM LOUNGE</div><h1 class="text-xl font-black text-white" id="tvStageTitleText"></h1></div>
       </div>
       <div class="text-sm font-black font-gothic text-orange-400 bg-black/70 border border-white/20 rounded-2xl px-4 py-2" id="tvRealtimeClock">18:00:00</div>
     </div>
+    
     <div id="tvStageContainer" class="my-auto py-8 px-8 z-10 flex-1 flex flex-col items-center justify-center w-full"></div>
+    
     <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex justify-between text-xs text-gray-400 z-10 bg-black/70 backdrop-blur-md hidden">
       <div>🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div><div class="text-orange-300 font-bold">HALLOWEEN SURVIVAL 2026</div>
     </div>
@@ -83,6 +88,15 @@
   <main id="view-admin" class="hidden flex-1 py-4 px-3 flex justify-center items-start bg-[#050308] overflow-y-auto">
     <div class="w-full max-w-lg space-y-4 pb-10">
       
+      <!-- 사운드 제어 복구 -->
+      <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-3 flex items-center justify-between">
+        <h3 class="text-xs font-black text-blue-400">🔊 TV 사운드 조절</h3>
+        <div class="flex items-center gap-2">
+          <input type="range" id="adminVol" min="0" max="100" value="100" onchange="changeVolume(this.value)" class="w-24">
+          <button id="adminMuteBtn" onclick="toggleMute()" class="px-3 py-1 bg-blue-800 rounded text-xs text-white">음소거</button>
+        </div>
+      </div>
+
       <!-- 스테이지 제어 -->
       <div class="bg-[#120d1d] border-2 border-orange-500/50 rounded-2xl p-4 space-y-3">
         <div class="flex justify-between items-center border-b border-orange-500/30 pb-2">
@@ -143,29 +157,30 @@
     firebase.initializeApp({ databaseURL: "https://halloween-2026-1407e-default-rtdb.firebaseio.com/" });
     const db = firebase.database();
     const ADMIN_PIN = "261031";
-    const VID_OPENING = "Yqp_2etisLk"; const VID_BGM = "TkEzDC1BeMU"; const VID_JUDGE = "Yqp_2etisLk";
+    const VID_BGM = "TkEzDC1BeMU"; const VID_JUDGE = "Yqp_2etisLk";
 
+    // STAGES 갱신: 로컬 오프닝 비디오 타입 추가
     const STAGES = [
-      { id: 'STAGE_REST_6PM',       title: '[대기] 평온한 저택 라운지', vid: VID_BGM },
-      { id: 'STAGE_STORY_INTRO',    title: '[오프닝] 오프닝 & 저주의 시작', vid: VID_OPENING },
-      { id: 'STAGE_QR_GUIDE',       title: '[접속] 스마트폰 지령서 안내', vid: VID_BGM },
-      { id: 'STAGE_PARTY_ROOM',     title: '[파티] 할로윈 나이트 파티', vid: VID_BGM },
+      { id: 'STAGE_REST_6PM',       title: '[대기] 평온한 저택 라운지', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_STORY_INTRO',    title: '[오프닝] 저주의 시작 (로컬 영상)', type: 'local', vid: 'opening.mp4' },
+      { id: 'STAGE_QR_GUIDE',       title: '[접속] QR 및 룰 설명', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_PARTY_ROOM',     title: '[파티] 할로윈 나이트 파티', type: 'yt', vid: VID_BGM },
       
-      { id: 'STAGE_GAME1_READY',    title: '[미니게임] 준비 화면', vid: VID_BGM, sound: 'bell' },
-      { id: 'STAGE_GAME1_PLAY',     title: '[미니게임] 문제 진행 & 점수판', vid: VID_BGM },
-      { id: 'STAGE_GAME1_WIN',      title: '[미니게임] 우승자 발표', vid: VID_BGM },
+      { id: 'STAGE_GAME1_READY',    title: '[미니게임] 준비 화면', type: 'yt', vid: VID_BGM, sound: 'bell' },
+      { id: 'STAGE_GAME1_PLAY',     title: '[미니게임] 문제 진행 & 점수판', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_GAME1_WIN',      title: '[미니게임] 우승자 발표', type: 'yt', vid: VID_BGM },
       
-      { id: 'STAGE_VOTE_10PM',      title: '[심판] 10시 최후의 심판 (영상)', vid: VID_JUDGE },
-      { id: 'STAGE_VOTE_QR',        title: '[투표] 투표/미션보고 접속QR', vid: VID_BGM },
+      { id: 'STAGE_VOTE_10PM',      title: '[심판] 10시 최후의 심판 (영상)', type: 'yt', vid: VID_JUDGE },
+      { id: 'STAGE_VOTE_QR',        title: '[투표] 투표/미션보고 접속QR', type: 'yt', vid: VID_BGM },
       
-      { id: 'STAGE_VOTE_RESULT_1',  title: '[결과 1] 최다 득표 1, 2위 발표', vid: VID_BGM },
-      { id: 'STAGE_VOTE_RESULT_2',  title: '[결과 2] 1, 2위 정체 공개', vid: VID_BGM },
-      { id: 'STAGE_VOTE_RESULT_3',  title: '[결과 3] 유령 미션 보고서 공개', vid: VID_BGM },
-      { id: 'STAGE_VOTE_RESULT_4',  title: '[엔딩] 최종 진영 승패 확정', vid: VID_BGM }
+      { id: 'STAGE_VOTE_RESULT_1',  title: '[결과 1] 최다 득표 1, 2위 발표', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_VOTE_RESULT_2',  title: '[결과 2] 1, 2위 정체 공개', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_VOTE_RESULT_3',  title: '[결과 3] 유령 미션 보고서 공개', type: 'yt', vid: VID_BGM },
+      { id: 'STAGE_VOTE_RESULT_4',  title: '[엔딩] 최종 진영 승패 확정', type: 'yt', vid: VID_BGM }
     ];
 
     const MG1_DATA = [
-      { q: '할로윈퀴즈0.png', a: '0_도깨비.jpg', title: '도깨비 (연습문제)' },
+      { q: '할로윈퀴즈0.png', a: '0_도깨비.jpg', title: '도깨비 (연습)' },
       { q: '할로윈퀴즈1.png', a: '1_기생충.jpg', title: '기생충' },
       { q: '할로윈퀴즈2.png', a: '2_오디세이.jpg', title: '오디세이' },
       { q: '할로윈퀴즈3.png', a: '3_어벤져스.jpg', title: '어벤져스' },
@@ -179,14 +194,15 @@
       { q: '할로윈퀴즈11.png', a: '11_꽃보다남자.jpg', title: '꽃보다 남자' }
     ];
 
+    // 지령서 내용 직관성 강화
     const INITIAL_CARDS = {
       'W3611': { code: 'W3611', charIcon: '🐺', charName: '늑대인간', playerName: '', score: 0,
         story: '보름달이 뜨면 감각이 예민해지는 은빛 늑대인간입니다.', secretTitle: '👻 [진짜 정체: 유령]',
-        mission: '※ 조력자: 🔮 마녀(M7420)\n[미션: 서로 다른 3명의, 서로 다른 약점 알아내기!]\n(조건: 가장 무섭게 본 영화, 가장 싫어하는 음식, 꿔봤던 악몽)\nex) 퇴마사 무서운영화 + 강시 악몽 + 사신 싫어하는음식\n🚨 캡처 필수!', isGhost: true },
+        mission: '※ 조력자: 🔮 마녀(M7420)\n\n[미션: 서로 다른 3명의 약점 캐내기!]\n📍 1. 가장 무섭게 본 영화 🎬\n📍 2. 가장 싫어하는 음식 🤮\n📍 3. 꿔봤던 최악의 악몽 🛌👻\n\n🚨 투표 시간에 증명해야 합니다. (화면 캡처 필수!)', isGhost: true },
       'M7420': { code: 'M7420', charIcon: '🔮', charName: '마녀', playerName: '', score: 0,
         story: '비밀스러운 약초와 저주를 다루는 숲속의 마녀입니다.', secretTitle: '🤪 [진짜 정체: 미치광이]',
-        mission: '※ 당신은 유령이 누구인지 모릅니다!\n[미션: 유령 대신 당신이 의심을 받아 처형대에 올라가면 단독 승리합니다!] (캡처 필수)', isMadman: true },
-      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', playerName: '', score: 0, story: '성수와 십자가로 악령을 쫓는 인간 퇴마사입니다.', secretTitle: '🎃 [정체: 인간 생존자]' },
+        mission: '※ 당신은 유령이 누구인지 모릅니다!\n※ 유령의 미션: "인간들에게서 무언가를 캐내야 합니다!"\n\n[미션: 유령 대신 의심을 받아 처형대에 올라가면 단독 승리!] (화면 캡처 필수)', isMadman: true },
+      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', playerName: '', score: 0, story: '성수와 십자가로 악령을 쫓는 퇴마사입니다.', secretTitle: '🎃 [정체: 인간 생존자]' },
       'K2491': { code: 'K2491', charIcon: '🧟', charName: '강시', playerName: '', score: 0, story: '부적이 붙은 강시입니다.', secretTitle: '📜 [정체: 인간 생존자 (페이크 몬스터)]' },
       'B8312': { code: 'B8312', charIcon: '🧛', charName: '뱀파이어', playerName: '', score: 0, story: '고풍스러운 뱀파이어입니다.', secretTitle: '🍷 [정체: 인간 생존자 (페이크 몬스터)]' },
       'Z9154': { code: 'Z9154', charIcon: '💀', charName: '좀비', playerName: '', score: 0, story: '탈출한 좀비 분장 생존자입니다.', secretTitle: '⛓️ [정체: 인간 생존자 (페이크 몬스터)]' },
@@ -197,38 +213,50 @@
     let activeMobileCode = null; let activeVoteCode = null; let ytPlayer = null; let tvAudioInited = false; let currentStageForSound = -1;
 
     // ----------------------------------------------------
-    // 2. YouTube & Firebase
+    // 2. YouTube, Local Audio & Firebase
     // ----------------------------------------------------
     function onYouTubeIframeAPIReady() { ytPlayer = new YT.Player('tvYoutubeBg', { videoId: VID_BGM, playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': VID_BGM } }); }
-    function initTVAudio() { tvAudioInited = true; document.getElementById('tvStartOverlay').style.display = 'none'; if(ytPlayer && ytPlayer.unMute) ytPlayer.unMute(); renderTV(); }
-    db.ref('halloween_state_v7').on('value', (snap) => {
+    
+    function applyAudioConfig() {
+      const v = appData.config.vol / 100; const m = appData.config.mute;
+      if(ytPlayer && ytPlayer.setVolume) { if(m) ytPlayer.mute(); else { ytPlayer.unMute(); ytPlayer.setVolume(appData.config.vol); } }
+      const loc = document.getElementById('tvLocalVideo'); if(loc) { loc.volume = v; loc.muted = m; }
+      const btn = document.getElementById('adminMuteBtn');
+      if(btn) { btn.innerText = m ? "소리 켜기" : "음소거"; btn.className = m ? "px-3 py-1 bg-red-600 rounded text-xs text-white" : "px-3 py-1 bg-blue-800 rounded text-xs text-white"; }
+    }
+
+    function initTVAudio() { tvAudioInited = true; document.getElementById('tvStartOverlay').style.display = 'none'; applyAudioConfig(); renderTV(); }
+    
+    db.ref('halloween_state_v8').on('value', (snap) => {
       if (snap.val()) { appData = snap.val(); if(!appData.votes) appData.votes={}; if(!appData.mg1) appData.mg1={qIdx:0,showA:false}; }
-      else db.ref('halloween_state_v7').set(appData);
-      renderAll();
+      else db.ref('halloween_state_v8').set(appData);
+      applyAudioConfig(); renderAll();
     });
-    function syncSave() { db.ref('halloween_state_v7').set(appData); }
+    
+    function syncSave() { db.ref('halloween_state_v8').set(appData); }
     setInterval(() => { const c = document.getElementById('tvRealtimeClock'); if(c) c.innerText = new Date().toLocaleTimeString('ko-KR', {hour12:false}); }, 1000);
     window.addEventListener('hashchange', routeView);
+    
     function routeView() {
       const hash = window.location.hash.replace('#', '') || 'tv';
       if (hash === 'admin' && prompt('🛠️ GM 비밀번호 입력 (261031):') !== ADMIN_PIN) { window.location.hash = 'tv'; return; }
       ['tv', 'mobile', 'admin', 'vote'].forEach(v => { const el = document.getElementById(`view-${v}`); if(el) el.classList.toggle('hidden', v !== hash); });
+      if(hash==='admin') { document.getElementById('adminVol').value = appData.config.vol; }
       renderAll();
     }
+    
     function getDisplayName(code) { const c = appData.cards[code]; return c && c.playerName ? `${c.charName}(${c.playerName})` : (c ? c.charName : '알수없음'); }
 
-    // 투표 집계 함수 (TV 렌더링에 공통 사용)
     function getVoteResults() {
       let voteCounts = {};
       Object.keys(appData.votes).forEach(voter => {
-        if (voter === 'W3611' || voter === 'T5780') return; // 유령, 퇴마사 표는 무효
+        if (voter === 'W3611' || voter === 'T5780') return;
         const v = appData.votes[voter];
         if (v.targets) v.targets.forEach(t => { if(t) voteCounts[t] = (voteCounts[t]||0) + 1; });
       });
       const sorted = Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]);
       return { 
-        top1: sorted.length > 0 ? sorted[0] : null,
-        top2: sorted.length > 1 ? sorted[1] : null,
+        top1: sorted.length > 0 ? sorted[0] : null, top2: sorted.length > 1 ? sorted[1] : null,
         isGhostExecuted: sorted.length > 0 && (sorted[0][0] === 'W3611' || (sorted.length > 1 && sorted[0][1] === sorted[1][1] && sorted[1][0] === 'W3611')),
         isMadmanExecuted: sorted.length > 0 && (sorted[0][0] === 'M7420' || (sorted.length > 1 && sorted[0][1] === sorted[1][1] && sorted[1][0] === 'M7420'))
       };
@@ -239,7 +267,21 @@
     // ----------------------------------------------------
     function renderTV() {
       const st = STAGES[appData.state.stageIdx] || STAGES[0];
-      if (tvAudioInited && ytPlayer && ytPlayer.getVideoData && ytPlayer.getVideoData().video_id !== st.vid) ytPlayer.loadVideoById({videoId: st.vid});
+      const iframeBg = document.getElementById('tvYoutubeBg'); const localBg = document.getElementById('tvLocalVideo');
+      
+      // 비디오 전환 로직
+      if (st.type === 'local') {
+        iframeBg.classList.add('hidden'); localBg.classList.remove('hidden');
+        if (tvAudioInited && localBg.paused) { localBg.currentTime = 0; localBg.play().catch(()=>{}); }
+        if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+      } else {
+        localBg.classList.add('hidden'); iframeBg.classList.remove('hidden'); localBg.pause();
+        if (tvAudioInited && ytPlayer && ytPlayer.getVideoData) {
+          if (ytPlayer.getVideoData().video_id !== st.vid) ytPlayer.loadVideoById({videoId: st.vid});
+          else if (ytPlayer.getPlayerState() !== 1) ytPlayer.playVideo();
+        }
+      }
+
       if (tvAudioInited && st.sound === 'bell' && currentStageForSound !== appData.state.stageIdx) {
         currentStageForSound = appData.state.stageIdx;
         const bell = document.getElementById('bellSound'); bell.currentTime = 0; let pc = 1;
@@ -247,16 +289,35 @@
         bell.play().catch(()=>{});
       }
 
-      document.getElementById('tvTopHeader').classList.toggle('hidden', st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM');
-      document.getElementById('tvFooterBar').classList.toggle('hidden', st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM');
+      document.getElementById('tvTopHeader').classList.toggle('hidden', st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM' || st.id === 'STAGE_STORY_INTRO');
+      document.getElementById('tvFooterBar').classList.toggle('hidden', st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM' || st.id === 'STAGE_STORY_INTRO');
       document.getElementById('tvStageTitleText').innerText = st.title;
       const box = document.getElementById('tvStageContainer'); const urlBase = window.location.href.split('#')[0];
 
-      if (st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM') box.innerHTML = '';
-      else if (st.id === 'STAGE_QR_GUIDE' || st.id === 'STAGE_VOTE_QR') {
-        const isVote = st.id === 'STAGE_VOTE_QR';
-        box.innerHTML = `<div class="text-center bg-black/85 border-2 ${isVote?'border-red-600':'border-purple-500'} p-10 rounded-3xl shadow-2xl"><h3 class="text-2xl font-bold ${isVote?'text-red-500':'text-white'} mb-6">${isVote?'⚖️ 진실의 제단 접속 QR':'지령서 수신 QR 코드'}</h3><div id="qrBoxTv" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
-        setTimeout(() => { const q = document.getElementById('qrBoxTv'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+(isVote?'#vote':'#mobile'), width:250, height:250}); }, 100);
+      if (st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM' || st.id === 'STAGE_STORY_INTRO') box.innerHTML = '';
+      else if (st.id === 'STAGE_QR_GUIDE') {
+        box.innerHTML = `
+          <div class="flex flex-row gap-6 w-full max-w-6xl items-center justify-center anim-reveal-tension">
+            <div class="bg-black/85 border-4 border-purple-500 p-8 rounded-3xl shadow-2xl flex flex-col items-center">
+              <h3 class="text-2xl font-black text-white mb-6">스마트폰 지령서 스캔</h3>
+              <div id="qrBoxTv" class="bg-white p-3 rounded-xl"></div>
+            </div>
+            <div class="bg-black/80 border border-white/20 p-8 rounded-3xl text-left text-white w-[500px] shadow-xl">
+               <h3 class="text-3xl font-black text-orange-400 border-b border-orange-500/50 pb-4 mb-4">📜 서바이벌 룰 안내</h3>
+               <ul class="space-y-4 text-base">
+                 <li><span class="text-green-400 font-bold">🎃 인간 진영 승리:</span> 투표에서 유령 색출하여 처형</li>
+                 <li><span class="text-red-400 font-bold">👻 유령 진영 승리:</span> 정체를 숨기고 끝까지 살아남기</li>
+                 <li><span class="text-purple-400 font-bold">🤪 미치광이 단독 승리:</span> 유령 대신 자신이 처형당하기</li>
+                 <li class="bg-red-900/50 p-3 rounded border border-red-500/30 text-red-200">※ 유령에게는 <span class="font-bold">비공개 비밀 미션</span>이 있습니다.</li>
+                 <li class="text-yellow-300 font-bold mt-4">🚫 재미를 위해 남에게 스마트폰을 보여주지 마세요!</li>
+               </ul>
+            </div>
+          </div>`;
+        setTimeout(() => { const q = document.getElementById('qrBoxTv'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#mobile', width:250, height:250}); }, 100);
+      }
+      else if (st.id === 'STAGE_VOTE_QR') {
+        box.innerHTML = `<div class="text-center bg-black/90 border-4 border-red-600 p-10 rounded-3xl shadow-2xl anim-reveal-tension"><h3 class="text-3xl font-black text-red-500 mb-6">⚖️ 진실의 제단 접속 QR</h3><div id="qrVoteBoxTv" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
+        setTimeout(() => { const q = document.getElementById('qrVoteBoxTv'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#vote', width:250, height:250}); }, 100);
       }
       else if (st.id === 'STAGE_GAME1_READY') {
         box.innerHTML = `<div class="text-center anim-reveal-tension"><h1 class="text-6xl font-black text-red-500 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)] mb-4 font-gothic">어둠으로 덮인 포스터</h1><p class="text-2xl text-gray-300">어둠 속에 묻힌 진실을 찾아라...</p></div>`;
@@ -266,7 +327,7 @@
         const players = Object.values(appData.cards).filter(c => c.playerName);
         const scoreCards = players.map(c => `<div class="bg-gray-900/90 border border-gray-600 rounded-xl p-2 text-center flex flex-col items-center justify-center"><div class="text-2xl">${c.charIcon}</div><div class="text-white font-bold text-xs truncate w-full">${getDisplayName(c.code)}</div><div class="text-2xl font-black text-orange-400">${c.score}</div></div>`).join('');
         box.innerHTML = `
-          <div class="flex flex-col md:flex-row w-full max-w-6xl gap-6 items-center justify-center h-full">
+          <div class="flex flex-col md:flex-row w-full max-w-6xl gap-6 items-center justify-center h-full anim-reveal-tension">
             <div class="flex-1 flex flex-col items-center bg-black/80 p-4 rounded-3xl border ${isAns ? 'border-green-500' : 'border-white/20'}">
               <h2 class="text-xl font-bold text-yellow-400 mb-3">🎬 영화/드라마 맞추기</h2>
               <img src="assets/posters/${isAns ? qData.a : qData.q}" class="max-h-[50vh] object-contain rounded-xl shadow-lg">
@@ -283,38 +344,50 @@
         const mScore = Math.max(...players.map(c => c.score), 0);
         const winners = mScore > 0 ? players.filter(c => c.score === mScore) : [];
         if(winners.length === 0) box.innerHTML = `<h2 class="text-4xl text-gray-400">아무도 점수를 얻지 못했습니다.</h2>`;
-        else box.innerHTML = `<h2 class="text-4xl font-black text-yellow-400 mb-2 drop-shadow-lg">🎉 미니게임 1 우승자 🎉</h2><div class="text-lg text-yellow-200 mb-8">(우승자는 10시 투표에서 총 3표의 권한을 얻습니다!)</div><div class="flex gap-6 justify-center flex-wrap">` + winners.map(w => `<div class="bg-yellow-600/30 border-4 border-yellow-400 rounded-3xl p-6 text-center shadow-[0_0_30px_rgba(250,204,21,0.5)]"><img src="assets/characters/${w.code}.png" onerror="this.style.display='none'" class="h-20 w-20 mx-auto mb-3 rounded-full border-2 border-yellow-400 object-cover"><div class="text-3xl mb-1">${w.charIcon}</div><div class="text-xl font-black text-white">${getDisplayName(w.code)}</div><div class="text-2xl text-yellow-300 mt-1">${w.score}점</div></div>`).join('') + `</div>`;
+        else box.innerHTML = `<div class="anim-reveal-tension text-center"><h2 class="text-5xl font-black text-yellow-400 mb-2 drop-shadow-lg">🎉 미니게임 우승자 🎉</h2><div class="text-xl text-yellow-200 mb-10">(우승자는 10시 투표에서 +1 추가 투표권을 획득합니다!)</div><div class="flex gap-6 justify-center flex-wrap">` + winners.map(w => `<div class="bg-yellow-600/30 border-4 border-yellow-400 rounded-3xl p-8 text-center shadow-[0_0_30px_rgba(250,204,21,0.5)]"><img src="assets/characters/${w.code}.png" onerror="this.style.display='none'" class="h-24 w-24 mx-auto mb-4 rounded-full border-2 border-yellow-400 object-cover"><div class="text-4xl mb-2">${w.charIcon}</div><div class="text-2xl font-black text-white">${getDisplayName(w.code)}</div><div class="text-3xl text-yellow-300 mt-2">${w.score}점</div></div>`).join('') + `</div></div>`;
       }
       else if (st.id === 'STAGE_VOTE_RESULT_1') {
         const res = getVoteResults();
         if(!res.top1) { box.innerHTML = `<h2 class="text-4xl text-gray-400">집계된 유효 투표가 없습니다.</h2>`; return; }
-        
-        let html = `<h2 class="text-5xl font-black text-red-500 mb-10 drop-shadow-lg">⛓️ 처형대 최다 득표자</h2><div class="flex gap-8 justify-center anim-reveal-tension">`;
-        html += `<div class="bg-red-900/60 border-4 border-red-500 rounded-3xl p-8 text-center shadow-[0_0_30px_rgba(220,38,38,0.6)] relative"><div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-1 rounded-full text-lg">1위 (${res.top1[1]}표)</div><img src="assets/characters/${res.top1[0]}.png" onerror="this.style.display='none'" class="h-32 w-32 mx-auto mb-4 rounded-full border-2 border-red-400 object-cover"><div class="text-5xl mb-2">${appData.cards[res.top1[0]].charIcon}</div><div class="text-4xl font-black text-white">${getDisplayName(res.top1[0])}</div></div>`;
+        let html = `<h2 class="text-5xl font-black text-red-500 mb-10 drop-shadow-lg">⛓️ 처형대 최다 득표자</h2><div class="flex gap-10 justify-center anim-reveal-tension">`;
+        html += `<div class="bg-red-900/60 border-4 border-red-500 rounded-3xl p-10 text-center shadow-[0_0_30px_rgba(220,38,38,0.6)] relative"><div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-1 rounded-full text-lg">1위 (${res.top1[1]}표)</div><img src="assets/characters/${res.top1[0]}.png" onerror="this.style.display='none'" class="h-32 w-32 mx-auto mb-4 rounded-full border-2 border-red-400 object-cover"><div class="text-5xl mb-2">${appData.cards[res.top1[0]].charIcon}</div><div class="text-4xl font-black text-white">${getDisplayName(res.top1[0])}</div></div>`;
         if (res.top2) {
-          html += `<div class="bg-gray-800/80 border-4 border-gray-500 rounded-3xl p-8 text-center opacity-80 relative"><div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-gray-600 text-white font-bold px-3 py-1 rounded-full text-sm">2위 (${res.top2[1]}표)</div><img src="assets/characters/${res.top2[0]}.png" onerror="this.style.display='none'" class="h-24 w-24 mx-auto mb-4 rounded-full border-2 border-gray-400 object-cover"><div class="text-4xl mb-2">${appData.cards[res.top2[0]].charIcon}</div><div class="text-2xl font-black text-gray-200">${getDisplayName(res.top2[0])}</div></div>`;
+          html += `<div class="bg-gray-800/80 border-4 border-gray-500 rounded-3xl p-8 text-center opacity-80 relative mt-4"><div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-gray-600 text-white font-bold px-3 py-1 rounded-full text-sm">2위 (${res.top2[1]}표)</div><img src="assets/characters/${res.top2[0]}.png" onerror="this.style.display='none'" class="h-24 w-24 mx-auto mb-3 rounded-full border-2 border-gray-400 object-cover"><div class="text-3xl mb-2">${appData.cards[res.top2[0]].charIcon}</div><div class="text-2xl font-black text-gray-200">${getDisplayName(res.top2[0])}</div></div>`;
         }
         html += `</div>`; box.innerHTML = html;
       }
       else if (st.id === 'STAGE_VOTE_RESULT_2') {
-        const res = getVoteResults();
-        if(!res.top1) return box.innerHTML = '';
-        
+        const res = getVoteResults(); if(!res.top1) return box.innerHTML = '';
         let t1Card = appData.cards[res.top1[0]];
-        let t1Identity = t1Card.isGhost ? "유령 👻" : (t1Card.isMadman ? "미치광이 🤪" : "인간 생존자 🎃");
+        
+        let t1Img = t1Card.code;
+        let t1Identity = "인간 생존자 🎃";
+        if (t1Card.isGhost) { t1Identity = "유령 👻"; t1Img = "U0000"; }
+        else if (t1Card.isMadman) { t1Identity = "미치광이 🤪"; t1Img = "U0001"; }
         
         let html = `<div class="flex flex-col items-center anim-reveal-tension"><h2 class="text-4xl font-black text-white mb-6">최다 득표자의 진짜 정체는...</h2>`;
-        html += `<div class="bg-black/80 border-4 border-red-600 p-10 rounded-3xl text-center shadow-[0_0_40px_rgba(220,38,38,0.8)]"><div class="text-6xl mb-4">${t1Card.charIcon}</div><div class="text-4xl font-bold text-white mb-6">${getDisplayName(res.top1[0])}</div><div class="text-5xl font-black text-red-500 animate-pulse bg-red-950/50 px-6 py-3 rounded-2xl">${t1Identity}</div></div>`;
+        html += `<div class="bg-black/80 border-4 border-red-600 p-10 rounded-3xl text-center shadow-[0_0_40px_rgba(220,38,38,0.8)]"><img src="assets/characters/${t1Img}.png" onerror="this.src='assets/characters/${t1Card.code}.png'" class="h-40 w-40 mx-auto mb-4 rounded-full border-4 border-red-500 object-cover"><div class="text-4xl font-bold text-white mb-6">${getDisplayName(res.top1[0])}</div><div class="text-5xl font-black text-red-500 animate-pulse bg-red-950/50 px-6 py-3 rounded-2xl">${t1Identity}</div></div>`;
         
-        if (t1Card.isGhost) html += `<div class="mt-8 text-3xl text-green-400 font-bold">인간 진영이 유령을 잡아냈습니다!</div>`;
-        else if (t1Card.isMadman) html += `<div class="mt-8 text-3xl text-purple-400 font-bold">미치광이가 시선 끌기에 성공했습니다!</div>`;
-        else html += `<div class="mt-8 text-3xl text-red-500 font-bold">무고한 인간이 처형되었습니다...</div>`;
+        if (t1Card.isGhost) html += `<div class="mt-8 text-3xl text-green-400 font-bold drop-shadow-md">인간 진영이 유령을 색출해냈습니다!</div>`;
+        else if (t1Card.isMadman) html += `<div class="mt-8 text-3xl text-purple-400 font-bold drop-shadow-md">미치광이가 시선 끌기에 성공했습니다!</div>`;
+        else html += `<div class="mt-8 text-3xl text-red-500 font-bold drop-shadow-md">무고한 인간이 억울하게 처형되었습니다...</div>`;
         
         box.innerHTML = html + `</div>`;
       }
       else if (st.id === 'STAGE_VOTE_RESULT_3') {
-        const ghostV = appData.votes['W3611'];
-        box.innerHTML = `<div class="bg-black/90 border-4 border-purple-600 rounded-3xl p-10 max-w-3xl w-full shadow-[0_0_50px_rgba(147,51,234,0.6)] anim-reveal-tension"><h2 class="text-4xl font-black text-purple-400 mb-6 text-center">👻 유령의 미션 보고서</h2><div class="bg-gray-900 border border-purple-800 rounded-xl p-6 text-white text-xl leading-relaxed whitespace-pre-wrap">${ghostV && ghostV.missionText ? ghostV.missionText : '제출된 보고서가 없습니다.'}</div></div>`;
+        const gV = appData.votes['W3611'];
+        let rHtml = '';
+        if (gV && gV.reports && gV.reports.length > 0) {
+          rHtml = gV.reports.map((r, i) => {
+            let tName = r.target ? getDisplayName(r.target) : '미선택';
+            return `<div class="bg-purple-950/50 border border-purple-500/50 rounded-xl p-4 text-left flex flex-col gap-2">
+              <div class="text-yellow-300 font-bold text-xl">[대상: ${tName}]</div>
+              <div class="text-white text-lg">${r.text || '내용 없음'}</div>
+            </div>`;
+          }).join('');
+        } else { rHtml = `<div class="text-gray-400 text-2xl py-10">제출된 보고서가 없습니다.</div>`; }
+        
+        box.innerHTML = `<div class="bg-black/90 border-4 border-purple-600 rounded-3xl p-10 max-w-4xl w-full shadow-[0_0_50px_rgba(147,51,234,0.6)] anim-reveal-tension text-center"><h2 class="text-5xl font-black text-purple-400 mb-8">👻 유령의 미션 (약점 수집) 보고서</h2><div class="grid grid-cols-3 gap-6">${rHtml}</div></div>`;
       }
       else if (st.id === 'STAGE_VOTE_RESULT_4') {
         const res = getVoteResults();
@@ -322,11 +395,11 @@
         
         if (res.isMadmanExecuted) { vicText = "🤪 미치광이 단독 승리! (인간/유령 패배)"; vicColor = "text-purple-400"; }
         else if (res.isGhostExecuted) { vicText = "🎃 인간 진영 승리! (유령 색출 성공)"; vicColor = "text-green-400"; }
-        else { vicText = "👻 유령 진영 승리! (미션 결과에 따라 최종 확정)"; vicColor = "text-red-500"; }
+        else { vicText = "👻 유령 진영 승리! (미션 검토로 최종 확인 요망)"; vicColor = "text-red-500"; }
 
-        box.innerHTML = `<div class="flex flex-col items-center anim-reveal-tension"><div class="text-7xl mb-8">⚖️</div><div class="text-6xl font-black ${vicColor} drop-shadow-[0_0_30px_currentColor] bg-black/80 px-10 py-6 border-2 border-white/20 rounded-3xl text-center leading-snug">${vicText}</div></div>`;
+        box.innerHTML = `<div class="flex flex-col items-center anim-reveal-tension"><div class="text-7xl mb-8">⚖️</div><div class="text-6xl font-black ${vicColor} drop-shadow-[0_0_30px_currentColor] bg-black/80 px-10 py-8 border-2 border-white/20 rounded-3xl text-center leading-snug">${vicText}</div></div>`;
       }
-      else box.innerHTML = `<div class="text-center bg-black/80 border-2 border-orange-500/60 p-10 rounded-3xl max-w-xl mx-auto shadow-2xl"><h2 class="text-3xl font-black text-orange-400">${st.title}</h2></div>`;
+      else box.innerHTML = `<div class="text-center bg-black/80 border-2 border-orange-500/60 p-10 rounded-3xl max-w-xl mx-auto shadow-2xl anim-reveal-tension"><h2 class="text-3xl font-black text-orange-400">${st.title}</h2></div>`;
     }
 
     // ----------------------------------------------------
@@ -348,9 +421,9 @@
         <div class="bg-purple-950/80 p-5 rounded-2xl text-white text-center border border-purple-500/50 shadow-xl">
           <img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="w-24 h-24 mx-auto rounded-full mb-3 object-cover border-2 border-purple-400">
           <div class="text-4xl mb-2">${c.charIcon}</div><div class="text-xl font-black">${getDisplayName(c.code)}</div>
-          <div class="mt-4 p-3 bg-black/60 rounded-xl border border-red-500/50">
-            <div class="${c.isGhost||c.isMadman ? 'text-xl text-red-400' : 'text-sm text-orange-300'} font-black animate-pulse">${c.secretTitle}</div>
-            ${c.mission ? `<div class="mt-3 text-xs text-left bg-red-950/40 p-3 rounded border border-red-500/30 text-red-200 whitespace-pre-wrap">${c.mission}</div>` : ''}
+          <div class="mt-4 p-4 bg-black/70 rounded-xl border border-red-500/50">
+            <div class="${c.isGhost||c.isMadman ? 'text-xl text-red-400' : 'text-sm text-orange-300'} font-black animate-pulse mb-3">${c.secretTitle}</div>
+            ${c.mission ? `<div class="text-xs text-left bg-red-950/50 p-3 rounded border border-red-500/40 text-red-200 whitespace-pre-wrap leading-relaxed">${c.mission}</div>` : ''}
           </div>
         </div>`;
     }
@@ -365,38 +438,54 @@
     function renderVoteForm() {
       const code = activeVoteCode; const c = appData.cards[code];
       const formEl = document.getElementById('voteFormContent');
+      const pArr = Object.values(appData.cards).filter(x => x.playerName && x.code !== code);
+      const opts = pArr.map(x => `<option value="${x.code}">${getDisplayName(x.code)}</option>`).join('');
       
       if (c.isGhost) {
-        formEl.innerHTML = `<h3 class="text-lg font-bold text-red-400">👻 유령 약점 수집 보고서</h3><textarea id="ghostMissionInput" class="w-full h-40 bg-gray-900 border border-red-700 rounded p-3 text-sm text-white" placeholder="누구의 어떤 약점을 알아냈는지 3가지를 상세히 적어주세요!"></textarea><button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded mt-3">보고서 제출</button>`;
+        let ghostHtml = `<h3 class="text-lg font-bold text-red-400 mb-3">👻 3가지 약점 수집 보고서</h3>`;
+        for (let i = 1; i <= 3; i++) {
+          ghostHtml += `
+            <div class="bg-gray-900 border border-red-900 rounded p-3 mb-3">
+              <div class="text-xs text-red-300 font-bold mb-1">약점 ${i}</div>
+              <select id="ghostT${i}" class="w-full bg-black border border-gray-700 rounded p-2 text-white text-sm mb-2"><option value="">-- 대상 선택 --</option>${opts}</select>
+              <input type="text" id="ghostV${i}" placeholder="약점 내용 입력 (예: 기생충)" class="w-full bg-black border border-gray-700 rounded p-2 text-white text-sm">
+            </div>`;
+        }
+        formEl.innerHTML = ghostHtml + `<button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded mt-2 shadow-lg">보고서 제출</button>`;
       } else {
-        const pArr = Object.values(appData.cards).filter(x => x.playerName);
-        const mScore = Math.max(...pArr.map(x => x.score), 0);
+        const allP = Object.values(appData.cards).filter(x => x.playerName);
+        const mScore = Math.max(...allP.map(x => x.score), 0);
         const isWinner = c.score === mScore && mScore > 0;
-        const voteCount = isWinner ? 3 : 2; // 기본 2표, 우승자 3표
-        
-        const opts = pArr.filter(x => x.code !== code).map(x => `<option value="${x.code}">${getDisplayName(x.code)}</option>`).join('');
+        const voteCount = isWinner ? 3 : 2; 
         
         let selectsHTML = '';
         for(let i=1; i<=voteCount; i++) {
-          selectsHTML += `<select class="vote-target w-full bg-gray-900 border border-red-700 rounded p-3 text-white mb-2"><option value="">-- [표 ${i}] 의심되는 사람 선택 --</option>${opts}</select>`;
+          selectsHTML += `<select class="vote-target w-full bg-gray-900 border border-red-700 rounded p-3 text-white mb-2 shadow-inner"><option value="">-- [표 ${i}] 의심 대상 선택 --</option>${opts}</select>`;
         }
 
         formEl.innerHTML = `
-          <div class="mb-3 text-center border border-red-800 p-2 rounded bg-black">
-            <span class="text-sm text-gray-300">당신의 행사 가능한 투표권:</span> <span class="text-xl font-black text-red-500">${voteCount}장</span>
-            ${isWinner ? '<br><span class="text-xs text-yellow-400">미니게임 우승 혜택 (+1표) 적용!</span>' : ''}
+          <div class="mb-3 text-center border border-red-800 p-3 rounded bg-black/60">
+            <span class="text-sm text-gray-300">당신의 투표 권한:</span> <span class="text-2xl font-black text-red-500">${voteCount}장</span>
+            ${isWinner ? '<br><span class="text-xs text-yellow-400 font-bold mt-1 inline-block">⭐ 미니게임 우승 혜택 (+1표) 적용!</span>' : ''}
           </div>
           ${selectsHTML}
           ${c.code==='T5780'?'<div class="text-xs text-orange-400 mb-2">※ 퇴마사의 표는 집계되지 않지만 제출은 필수입니다.</div>':''}
-          <textarea id="voteReason" class="w-full h-24 bg-gray-900 border border-red-700 rounded p-3 text-sm text-white mt-2" placeholder="의심하는 이유를 적어주세요."></textarea>
-          <button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded mt-3">투표 일괄 제출</button>`;
+          <textarea id="voteReason" class="w-full h-24 bg-gray-900 border border-red-700 rounded p-3 text-sm text-white mt-2" placeholder="의심하는 이유를 간략히 적어주세요."></textarea>
+          <button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded mt-3 shadow-lg">투표 일괄 제출</button>`;
       }
     }
 
     function submitVote() {
       const code = activeVoteCode; const c = appData.cards[code];
       if (c.isGhost) {
-        appData.votes[code] = { isGhostReport: true, missionText: document.getElementById('ghostMissionInput').value };
+        let reports = [];
+        for(let i=1; i<=3; i++) {
+          const t = document.getElementById(`ghostT${i}`).value;
+          const v = document.getElementById(`ghostV${i}`).value;
+          if(!t || !v) return alert('3명의 대상과 약점 내용을 모두 입력해주세요!');
+          reports.push({ target: t, text: v });
+        }
+        appData.votes[code] = { isGhostReport: true, reports };
       } else {
         const els = document.querySelectorAll('.vote-target');
         let targets = [];
@@ -406,16 +495,17 @@
         }
         appData.votes[code] = { targets, reason: document.getElementById('voteReason').value };
       }
-      syncSave(); alert('제출 완료!'); document.getElementById('voteFormContent').innerHTML = `<div class="text-center text-gray-400 py-10">제출이 완료되었습니다. TV 화면을 주시하세요.</div>`;
+      syncSave(); alert('제출 완료!'); document.getElementById('voteFormContent').innerHTML = `<div class="text-center text-gray-400 py-10 font-bold">제출이 완료되었습니다.<br>진실의 시간이 다가옵니다...</div>`;
     }
 
     // ----------------------------------------------------
     // 5. 어드민 컨트롤
     // ----------------------------------------------------
+    function changeVolume(val) { appData.config.vol = val; syncSave(); }
+    function toggleMute() { appData.config.mute = !appData.config.mute; syncSave(); }
     function prevStage() { if (appData.state.stageIdx > 0) { appData.state.stageIdx--; syncSave(); } }
     function nextStage() { if (appData.state.stageIdx < STAGES.length - 1) { appData.state.stageIdx++; syncSave(); } }
     function jumpToStage(idx) { appData.state.stageIdx = idx; syncSave(); }
-    
     function changeMg1Q(delta) {
       let nIdx = appData.mg1.qIdx + delta;
       if(nIdx < 0) nIdx = 0; if(nIdx >= MG1_DATA.length) nIdx = MG1_DATA.length - 1;
@@ -424,7 +514,6 @@
     function toggleMg1A() { appData.mg1.showA = !appData.mg1.showA; syncSave(); }
     function modifyScore(code, d) { if(appData.cards[code]) { appData.cards[code].score = Math.max(0, appData.cards[code].score + d); syncSave(); } }
     function resetVotes() { if(confirm('투표 내역을 초기화합니까?')) { appData.votes = {}; syncSave(); } }
-    
     function hardResetPlayers() {
       if(prompt('모든 데이터를 초기화합니까? 비번입력:') !== ADMIN_PIN) return alert('취소됨');
       appData.cards = JSON.parse(JSON.stringify(INITIAL_CARDS)); appData.votes = {}; appData.state.stageIdx = 0; syncSave();
@@ -445,17 +534,20 @@
       if(vStatus) {
         vStatus.innerHTML = Object.values(appData.cards).filter(c=>c.playerName).map(c => {
           const v = appData.votes[c.code];
-          let content = `<span class="text-gray-500">⏳ 대기중</span>`;
+          let content = `<span class="text-gray-500">⏳ 제출 대기중</span>`;
           if (v) {
-            if (v.isGhostReport) content = `<span class="text-purple-400 break-all">보고서: ${v.missionText}</span>`;
+            if (v.isGhostReport) {
+              const rTxt = v.reports.map(r=>`[${appData.cards[r.target]?appData.cards[r.target].charName:'?'}] ${r.text}`).join(' / ');
+              content = `<span class="text-purple-400 break-all text-[8px] leading-tight">보고서: ${rTxt}</span>`;
+            }
             else {
               let tNames = v.targets.map(t => appData.cards[t]?appData.cards[t].charName:'?').join(', ');
-              content = `<span class="text-green-300 break-all">선택: [${tNames}] / 사유: ${v.reason}</span>`;
+              content = `<span class="text-green-300 break-all text-[9px] leading-tight">선택: [${tNames}]<br>사유: ${v.reason}</span>`;
             }
           }
           return `<div class="bg-gray-900 p-2 rounded border border-gray-700 flex flex-col gap-1">
             <span class="font-bold text-gray-300">${c.charName}(${c.playerName})</span>
-            <div class="text-[9px]">${content}</div>
+            ${content}
           </div>`;
         }).join('');
       }
