@@ -33,10 +33,10 @@
     
     <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
       <div id="tvYoutubeBg" class="youtube-bg"></div>
-      <!-- 로컬 영상 비율 유지(contain) 및 반복(loop) 제거 -->
+      <!-- 로컬 오프닝 영상 (반복 안함, 원본 비율 유지) -->
       <video id="tvLocalVideo" src="assets/video/opening.mp4" class="w-full h-full object-contain hidden" playsinline></video>
-      <div class="absolute inset-0 bg-gradient-to-b from-purple-950/60 via-black to-red-950/50 anim-spooky pointer-events-none"></div>
-      <div class="absolute inset-0 bg-black/40 pointer-events-none"></div>
+      <div id="tvDarkFilter1" class="absolute inset-0 bg-gradient-to-b from-purple-950/60 via-black to-red-950/50 anim-spooky pointer-events-none"></div>
+      <div id="tvDarkFilter2" class="absolute inset-0 bg-black/40 pointer-events-none"></div>
     </div>
 
     <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/60 backdrop-blur-md hidden">
@@ -44,7 +44,6 @@
         <div><div class="text-[10px] text-orange-400 font-bold uppercase">LIVING ROOM LOUNGE</div><h1 class="text-xl font-black text-white" id="tvStageTitleText"></h1></div>
       </div>
       <div class="flex items-center gap-3">
-        <!-- 10시 심판 카운트다운 타이머 -->
         <div class="bg-red-950/80 border border-red-500/60 rounded-2xl px-3 py-1 text-center shadow-lg" id="tvTimerBox">
           <div class="text-[9px] text-red-300 font-bold">⏰ 심판까지</div>
           <div class="text-sm font-black text-red-400 font-gothic tracking-wider" id="tvCountdownTimer">00:00:00</div>
@@ -154,7 +153,9 @@
     firebase.initializeApp({ databaseURL: "https://halloween-2026-1407e-default-rtdb.firebaseio.com/" });
     const db = firebase.database();
     
-    const VID_BGM = "TkEzDC1BeMU"; const VID_JUDGE = "Yqp_2etisLk";
+    const VID_BGM = "TkEzDC1BeMU"; 
+    
+    // 심판 10시 뷰를 영상에서 BGM+종소리로 변경
     const STAGES = [
       { id: 'STAGE_REST_6PM',       title: '[대기] 평온한 저택 라운지', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_STORY_INTRO',    title: '[오프닝] 저주의 시작 (로컬 영상)', type: 'local', vid: 'opening.mp4' },
@@ -163,7 +164,7 @@
       { id: 'STAGE_GAME1_READY',    title: '[미니게임] 준비 화면', type: 'yt', vid: VID_BGM, sound: 'bell' },
       { id: 'STAGE_GAME1_PLAY',     title: '[미니게임] 문제 진행 & 점수판', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_GAME1_WIN',      title: '[미니게임] 우승자 발표', type: 'yt', vid: VID_BGM },
-      { id: 'STAGE_VOTE_10PM',      title: '[심판] 10시 최후의 심판 (영상)', type: 'yt', vid: VID_JUDGE },
+      { id: 'STAGE_VOTE_10PM',      title: '[심판] 10시 최후의 심판', type: 'yt', vid: VID_BGM, sound: 'bell' },
       { id: 'STAGE_VOTE_QR',        title: '[투표] 투표/미션보고 접속QR', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_VOTE_RESULT_1',  title: '[결과 1] 최다 득표 1, 2위 발표', type: 'yt', vid: VID_BGM },
       { id: 'STAGE_VOTE_RESULT_2',  title: '[결과 2] 1, 2위 정체 공개', type: 'yt', vid: VID_BGM },
@@ -180,11 +181,10 @@
       { q: '할로윈퀴즈10.png', a: '10_폭싹속았수다.jpg', title: '폭싹 속았수다' }, { q: '할로윈퀴즈11.png', a: '11_꽃보다남자.jpg', title: '꽃보다 남자' }
     ];
 
-    // 서로 다른 인간 텍스트 부여 및 미션 설명 구체화
     const INITIAL_CARDS = {
       'W3611': { code: 'W3611', charIcon: '🐺', charName: '늑대인간', playerName: '', score: 0,
         story: '보름달이 뜨면 감각이 예민해지는 은빛 늑대인간입니다.', secretTitle: '👻 [진짜 정체: 유령]',
-        mission: '※ 조력자: 🔮 마녀(M7420, 미치광이)\n※ 미치광이는 약점 수집 대상이 아닙니다!\n\n[미션: 서로 다른 3명의 약점 캐내기!]\n1. 가장 무섭게 본 영화 🎬\n2. 가장 싫어하는 음식 🤮\n3. 꿔봤던 최악의 악몽 🛌👻\n\n🚨 투표 시간에 알아낸 3가지를 폼에 입력하게 됩니다.', isGhost: true },
+        mission: '※ 조력자: 🔮 마녀(M7420, 미치광이)\n※ 미치광이는 약점 수집 대상이 아닙니다!\n\n[미션: 서로 다른 3명의 약점 캐내기!]\n1. 가장 무섭게 본 영화 🎬\n2. 가장 싫어하는 음식 🤮\n3. 꿔봤던 최악의 악몽 🛌👻\n\n🚨 투표 시간에 알아낸 3가지를 폼에 직접 입력하게 됩니다.', isGhost: true },
       'M7420': { code: 'M7420', charIcon: '🔮', charName: '마녀', playerName: '', score: 0,
         story: '비밀스러운 약초와 저주를 다루는 숲속의 마녀입니다.', secretTitle: '🤪 [진짜 정체: 미치광이]',
         mission: '※ 당신은 유령이 누구인지 모릅니다.\n※ 유령의 미션: 인간들에게서 약점(영화, 음식, 악몽)을 캐내는 중입니다.\n\n[미션: 유령 대신 의심을 받아 처형대에 올라가면 단독 승리합니다!]', isMadman: true },
@@ -210,23 +210,17 @@
 
     function initTVAudio() { tvAudioInited = true; document.getElementById('tvStartOverlay').style.display = 'none'; applyAudioConfig(); renderTV(); }
     
-    // DB 버전 v9로 격상 (충돌 완벽 방지)
-    db.ref('halloween_state_v9').on('value', (snap) => {
+    // DB 버전 v10로 격상
+    db.ref('halloween_state_v10').on('value', (snap) => {
       if (snap.val()) { appData = snap.val(); if(!appData.votes) appData.votes={}; if(!appData.mg1) appData.mg1={qIdx:0,showA:false}; }
-      else db.ref('halloween_state_v9').set(appData);
+      else db.ref('halloween_state_v10').set(appData);
       applyAudioConfig();
-      // 입력창 초기화 방지: TV와 Admin만 자동 렌더, Mobile/Vote는 스코어만 업데이트
       renderTV(); renderAdminRemote();
-      if(activeMobileCode) {
-        const c = appData.cards[activeMobileCode];
-        const sEl = document.getElementById('mobileScoreSpan');
-        if (sEl && c) sEl.innerText = c.score;
-      }
+      if(activeMobileCode) { const c = appData.cards[activeMobileCode]; const sEl = document.getElementById('mobileScoreSpan'); if (sEl && c) sEl.innerText = c.score; }
     });
     
-    function syncSave() { db.ref('halloween_state_v9').set(appData); }
+    function syncSave() { db.ref('halloween_state_v10').set(appData); }
     
-    // 시간 및 카운트다운 업데이트
     setInterval(() => { 
       const now = new Date();
       const clock = document.getElementById('tvRealtimeClock');
@@ -244,7 +238,6 @@
     window.addEventListener('hashchange', routeView);
     function routeView() {
       const hash = window.location.hash.replace('#', '') || 'tv';
-      // Admin 진입 시 비밀번호 제거
       ['tv', 'mobile', 'admin', 'vote'].forEach(v => { const el = document.getElementById(`view-${v}`); if(el) el.classList.toggle('hidden', v !== hash); });
       if(hash==='admin') document.getElementById('adminVol').value = appData.config.vol;
       renderTV(); renderAdminRemote();
@@ -254,29 +247,49 @@
     
     function getDisplayName(code) { const c = appData.cards[code]; return c && c.playerName ? `${c.charName}(${c.playerName})` : (c ? c.charName : '알수없음'); }
 
+    // 투표 집계 (동률 시 미치광이(3) > 인간(2) > 유령(1) 자동 정렬 포함)
     function getVoteResults() {
       let voteCounts = {};
+      Object.values(appData.cards).forEach(c => { if(c.playerName) voteCounts[c.code] = 0; });
       Object.keys(appData.votes).forEach(voter => {
-        if (voter === 'W3611' || voter === 'T5780') return;
+        if (voter === 'W3611' || voter === 'M7420' || voter === 'T5780') return; // 유령, 미치광이, 퇴마사 표 무효
         const v = appData.votes[voter];
         if (v.targets) v.targets.forEach(t => { if(t) voteCounts[t] = (voteCounts[t]||0) + 1; });
       });
-      const sorted = Object.entries(voteCounts).sort((a,b)=>b[1]-a[1]);
+
+      const getPriority = (code) => {
+        if (code === 'M7420') return 3; // 미치광이 최고 우선
+        if (code === 'W3611') return 1; // 유령 최하 우선
+        return 2; // 인간
+      };
+
+      const sorted = Object.entries(voteCounts).sort((a,b) => {
+        if (b[1] !== a[1]) return b[1] - a[1]; // 표수 기준 내림차순
+        const pDiff = getPriority(b[0]) - getPriority(a[0]);
+        if (pDiff !== 0) return pDiff; // 동률 시 우선순위 기준 정렬
+        return Math.random() - 0.5; // 인간끼리 동률이면 랜덤
+      });
+
       return { 
-        top1: sorted.length > 0 ? sorted[0] : null, top2: sorted.length > 1 ? sorted[1] : null,
-        isGhostExecuted: sorted.length > 0 && (sorted[0][0] === 'W3611' || (sorted.length > 1 && sorted[0][1] === sorted[1][1] && sorted[1][0] === 'W3611')),
-        isMadmanExecuted: sorted.length > 0 && (sorted[0][0] === 'M7420' || (sorted.length > 1 && sorted[0][1] === sorted[1][1] && sorted[1][0] === 'M7420'))
+        top1: sorted.length > 0 && sorted[0][1] > 0 ? sorted[0] : null, 
+        top2: sorted.length > 1 && sorted[1][1] > 0 ? sorted[1] : null,
+        isGhostExecuted: sorted.length > 0 && sorted[0][1] > 0 && (sorted[0][0] === 'W3611' || (sorted.length > 1 && sorted[1][1] > 0 && sorted[1][0] === 'W3611')),
+        isMadmanExecuted: sorted.length > 0 && sorted[0][1] > 0 && (sorted[0][0] === 'M7420' || (sorted.length > 1 && sorted[1][1] > 0 && sorted[1][0] === 'M7420'))
       };
     }
 
     // ----------------------------------------------------
-    // TV 렌더링
+    // 3. TV 렌더링
     // ----------------------------------------------------
     function renderTV() {
       const st = STAGES[appData.state.stageIdx] || STAGES[0];
       const iframeBg = document.getElementById('tvYoutubeBg'); const localBg = document.getElementById('tvLocalVideo');
       
-      if (st.type === 'local') {
+      const isLocal = st.type === 'local';
+      document.getElementById('tvDarkFilter1').style.display = isLocal ? 'none' : 'block';
+      document.getElementById('tvDarkFilter2').style.display = isLocal ? 'none' : 'block';
+
+      if (isLocal) {
         iframeBg.classList.add('hidden'); localBg.classList.remove('hidden');
         if (tvAudioInited && localBg.paused) { localBg.currentTime = 0; localBg.play().catch(()=>{}); }
         if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
@@ -297,12 +310,18 @@
 
       const showTimer = !(st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_STORY_INTRO');
       document.getElementById('tvTopHeader').classList.toggle('hidden', !showTimer);
-      document.getElementById('tvTimerBox').classList.toggle('hidden', st.id === 'STAGE_VOTE_10PM' || st.id.includes('STAGE_VOTE_RESULT')); // 결과때는 타이머 숨김
-      document.getElementById('tvFooterBar').classList.toggle('hidden', st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM');
+      document.getElementById('tvTimerBox').classList.toggle('hidden', st.id === 'STAGE_VOTE_10PM' || st.id.includes('STAGE_VOTE_RESULT'));
+      document.getElementById('tvFooterBar').classList.toggle('hidden', st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM' || st.id === 'STAGE_STORY_INTRO');
       document.getElementById('tvStageTitleText').innerText = st.title;
+      
       const box = document.getElementById('tvStageContainer'); const urlBase = window.location.href.split('#')[0];
 
-      if (st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM' || st.id === 'STAGE_STORY_INTRO') box.innerHTML = '';
+      if (st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_STORY_INTRO') box.innerHTML = '';
+      else if (st.id === 'STAGE_PARTY_ROOM') {
+        const players = Object.values(appData.cards).filter(c => c.playerName);
+        const cardsHtml = players.map(c => `<div class="bg-black/60 border border-purple-500/30 p-4 rounded-3xl text-center shadow-lg"><img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="w-24 h-24 rounded-full mx-auto mb-3 object-cover border border-purple-900"><div class="text-3xl">${c.charIcon}</div><div class="text-xl font-bold text-white mt-2">${getDisplayName(c.code)}</div></div>`).join('');
+        box.innerHTML = `<div class="grid grid-cols-4 gap-6 w-full max-w-5xl anim-reveal-tension">${cardsHtml}</div>`;
+      }
       else if (st.id === 'STAGE_QR_GUIDE') {
         box.innerHTML = `
           <div class="flex flex-row gap-6 w-full max-w-[1200px] items-center justify-center anim-reveal-tension">
@@ -313,22 +332,19 @@
             <div class="bg-black/85 border border-white/20 p-8 rounded-3xl text-left text-white w-[600px] shadow-xl">
                <h3 class="text-3xl font-black text-orange-400 border-b border-orange-500/50 pb-4 mb-5">📜 서바이벌 룰 안내 (10시 투표)</h3>
                <ul class="space-y-4 text-lg">
-                 <li><span class="text-green-400 font-bold">🎃 인간 진영 승리:</span> 10시 투표 1/2등 안에 유령 색출 성공</li>
-                 <li><span class="text-purple-400 font-bold">🤪 미치광이 승리:</span> 자신이 1/2등 안에 들면 단독 승리 (유령 생존 무관)</li>
-                 <li><span class="text-red-400 font-bold">👻 유령 진영 승리:</span> 1/2등을 피하여 살아남고, 비밀 미션 완수 시 승리</li>
-                 <li class="bg-red-900/50 p-3 rounded border border-red-500/30 text-red-200 mt-2 text-base">※ 유령에게는 <span class="font-bold text-white">비공개 비밀 미션</span>이 있습니다.</li>
-                 <li class="text-yellow-300 font-bold mt-4 text-base">🚫 극비 사항: 자신의 스마트폰 화면이나 코드를 타인에게 절대 보여주지 마세요.</li>
+                 <li><span class="text-yellow-400 font-bold">1.</span> 10시 최종 투표 시 모든 참가자는 <span class="font-bold">2표씩</span> 행사합니다.</li>
+                 <li><span class="text-green-400 font-bold">🎃 인간 승리:</span> 10시 투표 1/2등 안에 유령 색출 성공</li>
+                 <li><span class="text-purple-400 font-bold">🤪 미치광이 승리:</span> 자신이 1/2등 안에 들면 단독 승리</li>
+                 <li><span class="text-red-400 font-bold">👻 유령 승리:</span> 1/2등을 피해 생존하고, 비밀 미션 완수 시 승리</li>
+                 <li class="bg-red-900/50 p-3 rounded border border-red-500/30 text-red-200 mt-2 text-base">※ 단, 유령과 미치광이, 퇴마사의 표는 <span class="font-bold">결과에 집계되지 않습니다.</span></li>
+                 <li class="text-yellow-300 font-bold mt-4 text-base">🚫 재미를 위해 자신의 화면을 남에게 절대 보여주지 마세요!</li>
                </ul>
             </div>
           </div>`;
         setTimeout(() => { const q = document.getElementById('qrBoxTv'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#mobile', width:250, height:250}); }, 100);
       }
-      else if (st.id === 'STAGE_VOTE_QR') {
-        box.innerHTML = `<div class="text-center bg-black/90 border-4 border-red-600 p-10 rounded-3xl shadow-2xl anim-reveal-tension"><h3 class="text-3xl font-black text-red-500 mb-6">⚖️ 진실의 제단 (투표 & 보고) 접속</h3><div id="qrVoteBoxTv" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
-        setTimeout(() => { const q = document.getElementById('qrVoteBoxTv'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#vote', width:250, height:250}); }, 100);
-      }
       else if (st.id === 'STAGE_GAME1_READY') {
-        box.innerHTML = `<div class="text-center anim-reveal-tension"><h1 class="text-6xl font-black text-red-500 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)] mb-4 font-gothic">어둠으로 덮인 포스터</h1><p class="text-2xl text-gray-300">어둠 속에 묻힌 진실을 찾아라...</p></div>`;
+        box.innerHTML = `<div class="text-center anim-reveal-tension"><h1 class="text-6xl font-black text-red-500 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)] mb-6 font-gothic">어둠으로 덮인 포스터</h1><p class="text-3xl text-gray-300 font-bold mb-4">할로윈의 저주로 변해버린 영화/드라마를 맞혀라!</p><div class="bg-red-900/50 border border-red-500 p-4 rounded-2xl inline-block mt-4"><p class="text-xl text-yellow-300 font-bold">🏆 1등 혜택: 10시 최종 투표에서 [추가 투표권 1장] 획득</p></div></div>`;
       }
       else if (st.id === 'STAGE_GAME1_PLAY') {
         const qData = MG1_DATA[appData.mg1.qIdx]; const isAns = appData.mg1.showA;
@@ -354,6 +370,28 @@
         if(winners.length === 0) box.innerHTML = `<h2 class="text-4xl text-gray-400">아무도 점수를 얻지 못했습니다.</h2>`;
         else box.innerHTML = `<div class="anim-reveal-tension text-center"><h2 class="text-5xl font-black text-yellow-400 mb-2 drop-shadow-lg">🎉 미니게임 우승자 🎉</h2><div class="text-xl text-yellow-200 mb-10">(우승자는 10시 투표에서 +1 추가 투표권을 획득합니다!)</div><div class="flex gap-6 justify-center flex-wrap">` + winners.map(w => `<div class="bg-yellow-600/30 border-4 border-yellow-400 rounded-3xl p-8 text-center shadow-[0_0_30px_rgba(250,204,21,0.5)]"><img src="assets/characters/${w.code}.png" onerror="this.style.display='none'" class="h-24 w-24 mx-auto mb-4 rounded-full border-2 border-yellow-400 object-cover"><div class="text-4xl mb-2">${w.charIcon}</div><div class="text-2xl font-black text-white">${getDisplayName(w.code)}</div><div class="text-3xl text-yellow-300 mt-2">${w.score}점</div></div>`).join('') + `</div></div>`;
       }
+      else if (st.id === 'STAGE_VOTE_10PM') {
+        box.innerHTML = `<div class="text-center anim-reveal-tension"><h1 class="text-7xl font-black text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)] mb-6 font-gothic animate-pulse">최후의 심판</h1><p class="text-3xl text-gray-300 font-bold">지금부터 저택에 숨어든 유령을 색출하기 위한 심판 투표를 시작합니다.</p></div>`;
+      }
+      else if (st.id === 'STAGE_VOTE_QR') {
+        box.innerHTML = `
+          <div class="flex flex-row gap-6 w-full max-w-[1200px] items-center justify-center anim-reveal-tension">
+            <div class="bg-black/90 border-4 border-red-600 p-8 rounded-3xl shadow-2xl flex flex-col items-center">
+              <h3 class="text-3xl font-black text-red-500 mb-6">⚖️ 진실의 제단 접속 QR</h3>
+              <div id="qrVoteBoxTv" class="bg-white p-3 rounded-xl"></div>
+            </div>
+            <div class="bg-black/85 border border-red-500/50 p-8 rounded-3xl text-left text-white w-[600px] shadow-xl">
+               <h3 class="text-3xl font-black text-orange-400 border-b border-red-500/50 pb-4 mb-5">🗳️ 투표 규칙 안내</h3>
+               <ul class="space-y-3 text-lg">
+                 <li><span class="text-yellow-400 font-bold">1.</span> 기본적으로 <span class="font-bold text-white">서로 다른 2명</span>에게 투표해야 합니다.</li>
+                 <li><span class="text-yellow-400 font-bold">2.</span> 추가 투표권(미니게임 우승)만 <span class="font-bold text-white">중복 투표(같은 사람 2표)</span>가 허용됩니다.</li>
+                 <li><span class="text-yellow-400 font-bold">3.</span> 유령, 미치광이, 퇴마사의 표는 <span class="font-bold text-red-400">무효 처리</span>됩니다.</li>
+                 <li class="bg-red-950/50 p-3 rounded border border-red-500/30 text-red-200 mt-2 text-base leading-snug">※ 동률 발생 시 우선순위:<br><span class="font-bold text-white">미치광이 > 인간 > 유령</span> 순으로 자동 처형 집계됩니다. (인간끼리 동률은 랜덤)</li>
+               </ul>
+            </div>
+          </div>`;
+        setTimeout(() => { const q = document.getElementById('qrVoteBoxTv'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#vote', width:250, height:250}); }, 100);
+      }
       else if (st.id === 'STAGE_VOTE_RESULT_1') {
         const res = getVoteResults();
         if(!res.top1) { box.innerHTML = `<h2 class="text-4xl text-gray-400">집계된 유효 투표가 없습니다.</h2>`; return; }
@@ -375,8 +413,8 @@
         let html = `<div class="flex flex-col items-center anim-reveal-tension"><h2 class="text-4xl font-black text-white mb-6">최다 득표자의 진짜 정체는...</h2>`;
         html += `<div class="bg-black/80 border-4 border-red-600 p-10 rounded-3xl text-center shadow-[0_0_40px_rgba(220,38,38,0.8)]"><img src="assets/characters/${t1Img}.png" onerror="this.src='assets/characters/${t1Card.code}.png'" class="h-40 w-40 mx-auto mb-4 rounded-full border-4 border-red-500 object-cover"><div class="text-4xl font-bold text-white mb-6">${getDisplayName(res.top1[0])}</div><div class="text-5xl font-black text-red-500 animate-pulse bg-red-950/50 px-6 py-3 rounded-2xl">${t1Identity}</div></div>`;
         
-        if (t1Card.isGhost) html += `<div class="mt-8 text-3xl text-green-400 font-bold drop-shadow-md">인간 진영이 유령을 색출해냈습니다!</div>`;
-        else if (t1Card.isMadman) html += `<div class="mt-8 text-3xl text-purple-400 font-bold drop-shadow-md">미치광이가 처형되어 단독 승리 조건을 달성했습니다!</div>`;
+        if (t1Card.isGhost) html += `<div class="mt-8 text-3xl text-green-400 font-bold drop-shadow-md">인간 진영이 1/2위 심판대에서 유령을 색출해냈습니다!</div>`;
+        else if (t1Card.isMadman) html += `<div class="mt-8 text-3xl text-purple-400 font-bold drop-shadow-md">미치광이가 심판대에 올라 단독 승리 조건을 달성했습니다!</div>`;
         else html += `<div class="mt-8 text-3xl text-red-500 font-bold drop-shadow-md">무고한 인간이 억울하게 처형되었습니다...</div>`;
         
         box.innerHTML = html + `</div>`;
@@ -411,7 +449,7 @@
     }
 
     // ----------------------------------------------------
-    // 모바일 지령서 & 투표
+    // 4. 모바일 지령서 & 투표
     // ----------------------------------------------------
     function loginMobile() {
       const code = document.getElementById('inputCode').value.trim().toUpperCase();
@@ -447,15 +485,14 @@
     function renderVoteForm() {
       const code = activeVoteCode; const c = appData.cards[code];
       const formEl = document.getElementById('voteFormContent');
-      const pArr = Object.values(appData.cards).filter(x => x.playerName && x.code !== code && !x.isMadman); // 미치광이는 약점 타겟 제외
+      const pArr = Object.values(appData.cards).filter(x => x.playerName && x.code !== code && !x.isMadman); 
       const optsG = pArr.map(x => `<option value="${x.code}">${getDisplayName(x.code)}</option>`).join('');
       const allP = Object.values(appData.cards).filter(x => x.playerName && x.code !== code);
       const optsH = allP.map(x => `<option value="${x.code}">${getDisplayName(x.code)}</option>`).join('');
       
       if (c.isGhost) {
         let ghostHtml = `<h3 class="text-lg font-bold text-red-400 mb-3">👻 3가지 약점 수집 보고서</h3>`;
-        const phs = ['예: 기생충', '예: 오이', '예: 귀신한테 쫓기는 꿈'];
-        const ths = ['무서운 영화', '싫어하는 음식', '최악의 악몽'];
+        const phs = ['예: 기생충', '예: 오이', '예: 쫓기는 꿈']; const ths = ['무서운 영화', '싫어하는 음식', '최악의 악몽'];
         for (let i = 1; i <= 3; i++) {
           ghostHtml += `
             <div class="bg-gray-900 border border-red-900 rounded p-3 mb-3">
@@ -497,16 +534,14 @@
       if (c.isGhost) {
         let reports = [];
         for(let i=1; i<=3; i++) {
-          const t = document.getElementById(`ghostT${i}`).value;
-          const v = document.getElementById(`ghostV${i}`).value;
+          const t = document.getElementById(`ghostT${i}`).value; const v = document.getElementById(`ghostV${i}`).value;
           if(!t) return alert(`${i}번째 대상을 선택하세요. (실패 시 '약점 수집 못함' 선택)`);
           if(t !== 'FAIL' && !v) return alert(`${i}번째 약점 내용을 입력하세요!`);
           reports.push({ target: t, text: v });
         }
         appData.votes[code] = { isGhostReport: true, reports };
       } else {
-        const tEls = document.querySelectorAll('.vote-target');
-        const rEls = document.querySelectorAll('.vote-reason');
+        const tEls = document.querySelectorAll('.vote-target'); const rEls = document.querySelectorAll('.vote-reason');
         let targets = []; let reasons = [];
         for(let i=0; i<tEls.length; i++) {
           if(!tEls[i].value || !rEls[i].value.trim()) return alert(`[표 ${i+1}]의 대상과 사유를 모두 입력해주세요!`);
