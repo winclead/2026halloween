@@ -3,377 +3,442 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HALLOWEEN 2026: SURVIVAL GAME SYSTEM</title>
+  <title>HALLOWEEN 2026: SURVIVAL GAME</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Firebase 실시간 동기화 SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Noto Sans KR', sans-serif; background-color: #040208; color: #f3f4f6; overflow-x: hidden; }
     .font-gothic { font-family: 'Cinzel', serif; }
-    @keyframes spookyPulse {
-      0%, 100% { opacity: 0.3; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(1.03); }
-    }
+    @keyframes spookyPulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.03); } }
     .anim-spooky { animation: spookyPulse 6s ease-in-out infinite; }
-    .youtube-bg { pointer-events: none; }
+    .youtube-bg { pointer-events: none; transform: scale(1.3); width: 100%; height: 100%; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col" id="bodyRoot">
-
-  <!-- 효과음 오디오 세팅 -->
   <audio id="bellSound" src="assets/bgm/bell.mp3" preload="auto"></audio>
 
   <!-- =========================================================
        VIEW 1: 📺 거실 TV 전광판 화면 (#tv)
   ========================================================== -->
   <main id="view-tv" class="hidden flex-1 flex flex-col justify-between relative overflow-hidden bg-[#030106] min-h-screen">
-    
-    <!-- 오디오 권한용 투명 버튼 (TV 화면 최초 1회 클릭 필요) -->
-    <div id="tvStartOverlay" class="absolute inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer" onclick="initTVAudio()">
-      <div class="text-white text-2xl font-bold animate-pulse">화면을 한 번 클릭해서 시스템(소리)을 시작하세요</div>
+    <div id="tvStartOverlay" class="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center cursor-pointer" onclick="initTVAudio()">
+      <div class="text-white text-3xl font-bold animate-pulse mb-4">📺 화면을 클릭하여 시스템과 사운드를 활성화하세요</div>
     </div>
 
-    <!-- 유튜브 백그라운드 영역 -->
+    <!-- YouTube API Div -->
     <div class="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
-      <iframe id="tvYoutubeBg" class="youtube-bg w-full h-full object-cover opacity-80 scale-125" 
-              src="" data-vid="" frameborder="0" allow="autoplay; fullscreen" allowfullscreen>
-      </iframe>
+      <div id="tvYoutubeBg" class="youtube-bg"></div>
       <div class="absolute inset-0 bg-gradient-to-b from-purple-950/60 via-black to-red-950/50 anim-spooky pointer-events-none"></div>
       <div class="absolute inset-0 bg-black/40 pointer-events-none"></div>
     </div>
 
-    <!-- 상단 헤더 -->
     <div id="tvTopHeader" class="flex items-center justify-between px-8 py-4 border-b border-white/10 z-10 bg-black/60 backdrop-blur-md hidden">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">🕯️</span>
-        <div>
-          <div class="text-[10px] text-orange-400 font-bold tracking-widest uppercase">LIVING ROOM LOUNGE</div>
-          <h1 class="text-lg md:text-xl font-black text-white" id="tvStageTitleText">평온한 저택</h1>
-        </div>
+      <div class="flex items-center gap-3"><span class="text-2xl">🕯️</span>
+        <div><div class="text-[10px] text-orange-400 font-bold uppercase">LIVING ROOM LOUNGE</div><h1 class="text-xl font-black text-white" id="tvStageTitleText"></h1></div>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="bg-black/70 border border-white/20 rounded-2xl px-3 py-1 text-right">
-          <div class="text-[9px] text-gray-400">현재 시각</div>
-          <div class="text-sm font-black font-gothic text-orange-400" id="tvRealtimeClock">18:00:00</div>
-        </div>
-      </div>
+      <div class="text-sm font-black font-gothic text-orange-400 bg-black/70 border border-white/20 rounded-2xl px-4 py-2" id="tvRealtimeClock">18:00:00</div>
     </div>
 
-    <!-- 중앙 컨텐츠 -->
     <div id="tvStageContainer" class="my-auto py-8 px-8 z-10 flex-1 flex flex-col items-center justify-center w-full"></div>
 
-    <!-- 하단 푸터 -->
-    <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 z-10 bg-black/70 backdrop-blur-md hidden">
-      <div>🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div>
-      <div class="text-orange-300 font-bold">HALLOWEEN SURVIVAL GAME 2026</div>
+    <div id="tvFooterBar" class="px-8 py-3 border-t border-white/10 flex justify-between text-xs text-gray-400 z-10 bg-black/70 backdrop-blur-md hidden">
+      <div>🕯️ 호스트 마스터 리모컨으로 제어됩니다.</div><div class="text-orange-300 font-bold">HALLOWEEN SURVIVAL 2026</div>
     </div>
   </main>
 
   <!-- =========================================================
-       VIEW 2: 📱 참가자 스마트폰 화면 (#mobile)
+       VIEW 2: 📱 스마트폰 지령서 (#mobile)
   ========================================================== -->
   <main id="view-mobile" class="hidden flex-1 py-6 px-4 flex justify-center items-start bg-[#06040a]">
     <div class="w-full max-w-md bg-[#130e21] border-2 border-purple-500/40 rounded-3xl overflow-hidden shadow-2xl p-5 space-y-4">
-      <div class="flex items-center justify-between border-b border-purple-500/30 pb-3">
-        <h2 class="text-base font-black text-white">참가자 지령서</h2>
-        <button onclick="logoutMobile()" id="btnMobileLogout" class="hidden text-xs px-2.5 py-1 bg-gray-800 rounded-lg text-gray-300 font-bold">로그아웃</button>
-      </div>
+      <h2 class="text-base font-black text-white border-b border-purple-500/30 pb-3">참가자 지령서</h2>
       <div id="mobileLoginBox" class="space-y-3">
-        <input id="inputCode" type="text" placeholder="비밀 코드 입력 (예: T5780)" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-black uppercase text-center text-sm">
-        <input id="inputName" type="text" maxlength="4" placeholder="실명 세 글자" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-bold text-center text-sm">
-        <button onclick="loginMobile()" class="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl text-sm">정체 확인하기</button>
+        <input id="inputCode" type="text" placeholder="비밀 코드 입력 (예: T5780)" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-black uppercase text-center">
+        <input id="inputName" type="text" maxlength="4" placeholder="실명 세 글자" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white font-bold text-center">
+        <button onclick="loginMobile()" class="w-full py-3 bg-orange-600 text-white font-black rounded-xl">정체 확인하기</button>
       </div>
-      <div id="mobileCardContent" class="hidden space-y-3"></div>
+      <div id="mobileCardContent" class="hidden space-y-4"></div>
     </div>
   </main>
 
   <!-- =========================================================
-       VIEW 3: 🛠️ 호스트 GM 리모컨 화면 (#admin)
+       VIEW 3: 🗳️ 최종 투표 및 미션 보고 (#vote)
+  ========================================================== -->
+  <main id="view-vote" class="hidden flex-1 py-6 px-4 flex justify-center items-start bg-[#050100]">
+    <div class="w-full max-w-md bg-[#1a0505] border-2 border-red-800 rounded-3xl p-5 space-y-4 text-white">
+      <h2 class="text-xl font-black text-red-500 border-b border-red-800/50 pb-3 text-center">⚖️ 진실의 제단</h2>
+      <div id="voteLoginBox" class="space-y-3">
+        <input id="voteInputCode" type="text" placeholder="본인의 비밀 코드 입력" class="w-full bg-black border border-red-900 rounded-xl px-4 py-3 text-center font-bold">
+        <button onclick="loginVote()" class="w-full py-3 bg-red-800 font-black rounded-xl">입장하기</button>
+      </div>
+      <div id="voteFormContent" class="hidden space-y-4"></div>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       VIEW 4: 🛠️ 호스트 GM 리모컨 (#admin)
   ========================================================== -->
   <main id="view-admin" class="hidden flex-1 py-4 px-3 flex justify-center items-start bg-[#050308] overflow-y-auto">
     <div class="w-full max-w-lg space-y-4 pb-10">
       
-      <!-- 스테이지 컨트롤 패널 -->
-      <div class="bg-[#120d1d] border-2 border-orange-500/50 rounded-3xl p-4 space-y-4 shadow-2xl">
-        <div class="bg-orange-950/60 border border-orange-500/40 rounded-2xl p-3 space-y-2">
-          <div class="flex justify-between items-center">
-            <h2 class="text-sm font-black text-white">📱 GM 메인 컨트롤러</h2>
-            <button onclick="seedAllDemoPlayers()" class="px-2 py-1 bg-emerald-700 text-white rounded text-[11px] font-bold">테스트유저 등록</button>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <button onclick="prevStage()" class="py-2 bg-gray-800 text-white font-black rounded-xl text-xs">◀ 이전 화면</button>
-            <button onclick="nextStage()" class="py-2 bg-orange-600 text-white font-black rounded-xl text-xs">다음 화면 ▶</button>
-          </div>
-          <div class="text-[11px] text-center text-orange-200 font-bold bg-black/40 py-1 rounded-lg" id="remoteCurrentStageLabel">현재 화면</div>
-        </div>
-        <div class="bg-[#161024] border border-gray-800 rounded-2xl p-3 space-y-2">
-          <h3 class="text-xs font-black text-orange-400">⏱️ 화면 바로가기</h3>
-          <div id="remoteStageList" class="grid grid-cols-2 gap-1.5 text-xs"></div>
+      <!-- 1. 사운드 제어 -->
+      <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-3 flex items-center justify-between">
+        <h3 class="text-xs font-black text-blue-400">🔊 TV 사운드</h3>
+        <div class="flex items-center gap-2">
+          <input type="range" id="adminVol" min="0" max="100" value="100" onchange="changeVolume(this.value)" class="w-24">
+          <button id="adminMuteBtn" onclick="toggleMute()" class="px-3 py-1 bg-blue-800 rounded text-xs text-white">음소거</button>
         </div>
       </div>
 
-      <!-- 게임 점수 컨트롤 패널 -->
-      <div class="bg-[#120d1d] border-2 border-purple-500/50 rounded-3xl p-4 space-y-3 shadow-2xl">
-        <h3 class="text-sm font-black text-purple-400 border-b border-purple-500/30 pb-2">🎮 미니게임 점수 조작반</h3>
-        <div id="adminScoreBoard" class="space-y-2">
-          <!-- JS로 참가자 리스트와 점수 버튼 렌더링 -->
+      <!-- 2. 스테이지 제어 -->
+      <div class="bg-[#120d1d] border-2 border-orange-500/50 rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center border-b border-orange-500/30 pb-2">
+          <h2 class="text-sm font-black text-white">📱 화면 컨트롤러</h2>
+          <div class="text-[10px] text-orange-200 bg-black/40 px-2 py-1 rounded" id="remoteCurrentStageLabel"></div>
         </div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <button onclick="prevStage()" class="py-2 bg-gray-800 text-white font-black rounded-xl text-xs">◀ 이전</button>
+          <button onclick="nextStage()" class="py-2 bg-orange-600 text-white font-black rounded-xl text-xs">다음 ▶</button>
+        </div>
+        <div id="remoteStageList" class="grid grid-cols-2 gap-1.5 text-xs"></div>
       </div>
 
+      <!-- 3. 점수 제어 -->
+      <div class="bg-[#120d1d] border-2 border-purple-500/50 rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center border-b border-purple-500/30 pb-2">
+          <h3 class="text-sm font-black text-purple-400">🎮 점수 제어 (현재 화면 적용)</h3>
+          <button onclick="resetScores()" class="text-[10px] bg-red-900/80 px-2 py-1 rounded text-white">점수 초기화</button>
+        </div>
+        <div id="adminScoreBoard" class="space-y-2"></div>
+      </div>
+
+      <!-- 4. 참가자 관리 -->
+      <div class="bg-[#120d1d] border-2 border-green-500/50 rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center border-b border-green-500/30 pb-2">
+          <h3 class="text-sm font-black text-green-400">👥 참가자 관리</h3>
+          <button onclick="hardResetPlayers()" class="text-[10px] bg-red-600 px-2 py-1 rounded text-white font-bold">전체 초기화</button>
+        </div>
+        <div id="adminPlayerMgmt" class="space-y-2 text-xs"></div>
+      </div>
     </div>
   </main>
 
   <script>
-    // Firebase 실시간 데이터베이스 설정
-    const firebaseConfig = {
-      databaseURL: "https://halloween-2026-1407e-default-rtdb.firebaseio.com/"
-    };
-    firebase.initializeApp(firebaseConfig);
+    // ----------------------------------------------------
+    // 1. Firebase 및 기본 설정
+    // ----------------------------------------------------
+    firebase.initializeApp({ databaseURL: "https://halloween-2026-1407e-default-rtdb.firebaseio.com/" });
     const db = firebase.database();
-
     const ADMIN_PIN = "261031";
 
-    // 영상 ID 설정
-    const VID_OPENING = "Yqp_2etisLk"; // 오프닝 영상
-    const VID_BGM = "TkEzDC1BeMU";     // 게임 진행 중 배경음악 영상
+    const VID_OPENING = "Yqp_2etisLk"; 
+    const VID_BGM = "TkEzDC1BeMU";     
+    const VID_JUDGE = "Yqp_2etisLk"; // 10시 심판용 영상 (필요시 교체)
 
-    // 스테이지 재구성 (미니게임용 유연한 구조)
     const STAGES = [
-      { id: 'STAGE_REST_6PM',    title: '평온한 저택 라운지', vid: VID_OPENING },
-      { id: 'STAGE_STORY_INTRO', title: '오프닝 & 저주의 시작', vid: VID_OPENING },
-      { id: 'STAGE_QR_GUIDE',    title: '스마트폰 접속 안내', vid: VID_OPENING },
-      { id: 'STAGE_PARTY_ROOM',  title: '할로윈 나이트 파티', vid: VID_BGM },
-      { id: 'STAGE_GAME_READY',  title: '미니게임 준비', vid: VID_BGM, sound: 'bell' },
-      { id: 'STAGE_GAME_EXPLAIN',title: '게임 룰 & 연습문제', vid: VID_BGM },
-      { id: 'STAGE_GAME_PLAY',   title: '진행 중: 실시간 점수판', vid: VID_BGM },
-      { id: 'STAGE_GAME_WINNER', title: '미니게임 우승자 발표', vid: VID_BGM },
-      { id: 'STAGE_VOTE_10PM',   title: '10시 최후의 심판', vid: VID_BGM },
-      { id: 'STAGE_VOTE_RESULT', title: '처형대 결과 발표', vid: VID_BGM },
-      { id: 'STAGE_MISSION_OPEN',title: '진실의 방 오픈', vid: VID_BGM }
+      { id: 'STAGE_REST_6PM',    title: '[대기] 평온한 저택 라운지', vid: VID_BGM },
+      { id: 'STAGE_STORY_INTRO', title: '[오프닝] 오프닝 & 저주의 시작', vid: VID_OPENING },
+      { id: 'STAGE_QR_GUIDE',    title: '[접속] 스마트폰 지령서 안내', vid: VID_BGM },
+      { id: 'STAGE_PARTY_ROOM',  title: '[파티] 할로윈 나이트 파티', vid: VID_BGM },
+      
+      { id: 'STAGE_GAME1_READY', title: '[미니게임 1] 준비', vid: VID_BGM, sound: 'bell' },
+      { id: 'STAGE_GAME1_EXP',   title: '[미니게임 1] 룰 설명 (연습)', vid: VID_BGM },
+      { id: 'STAGE_GAME1_PLAY',  title: '[미니게임 1] 진행 현황', vid: VID_BGM },
+      { id: 'STAGE_GAME1_WIN',   title: '[미니게임 1] 우승자 발표', vid: VID_BGM },
+      
+      { id: 'STAGE_VOTE_QR',     title: '[투표] 투표/미션보고 접속QR', vid: VID_BGM },
+      { id: 'STAGE_VOTE_10PM',   title: '[심판] 10시 최후의 심판 (영상)', vid: VID_JUDGE },
+      { id: 'STAGE_VOTE_RESULT', title: '[결과] 처형대 투표 결과', vid: VID_BGM },
+      { id: 'STAGE_MISSION_OPEN',title: '[엔딩] 진실의 방 (유령 공개)', vid: VID_BGM }
     ];
 
     const INITIAL_CARDS = {
-      'W3611': { code: 'W3611', charIcon: '🐺', charName: '늑대인간', charDesc: '보름달이 뜨면 감각이 예민해지는 은빛 늑대인간입니다.', secretTitle: '👻 당신의 진짜 정체: [유령]', playerName: '', score: 0 },
-      'M7420': { code: 'M7420', charIcon: '🔮', charName: '마녀', charDesc: '비밀스러운 약초와 저주를 다루는 마녀입니다.', secretTitle: '🤪 당신의 진짜 정체: [미치광이]', playerName: '', score: 0 },
-      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', charDesc: '성수와 십자가로 악령을 쫓는 냉철한 퇴마사입니다.', secretTitle: '🎃 당신의 정체: [인간 생존자]', playerName: '', score: 0 },
-      'K2491': { code: 'K2491', charIcon: '🧟', charName: '강시', charDesc: '부적이 붙은 채 저택을 떠도는 강시입니다.', secretTitle: '📜 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0 },
-      'B8312': { code: 'B8312', charIcon: '🧛', charName: '뱀파이어', charDesc: '고풍스러운 뱀파이어 귀족입니다.', secretTitle: '🍷 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0 },
-      'Z9154': { code: 'Z9154', charIcon: '💀', charName: '좀비', charDesc: '지하 감옥에서 탈출한 좀비입니다.', secretTitle: '⛓️ 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0 },
-      'S4823': { code: 'S4823', charIcon: '⏳', charName: '사신', charDesc: '영혼의 무게를 재는 저승의 사신입니다.', secretTitle: '🖤 당신의 정체: [인간 생존자 (페이크)]', playerName: '', score: 0 }
+      'W3611': { code: 'W3611', charIcon: '🐺', charName: '늑대인간', playerName: '', score: 0,
+        story: '보름달이 뜨면 감각이 예민해지는 은빛 늑대인간입니다. 사람들은 당신을 두려워하지만, 사실 당신은 무리를 잃은 외로운 존재일 뿐입니다.',
+        secretTitle: '👻 [당신의 진짜 정체: 원혼 유령]',
+        mission: '※ 미치광이 조력자: 🔮 마녀(M7420)\n\n[비밀 미션: 다른 사람들의 눈을 피해 저택의 물건 3가지 위치 바꾸기]\n\n🚨 중요: 투표 시간에 미션 성공 내역을 보고해야 합니다. 이 화면을 반드시 캡처해두세요!',
+        isGhost: true },
+      'M7420': { code: 'M7420', charIcon: '🔮', charName: '마녀', playerName: '', score: 0,
+        story: '비밀스러운 약초와 저주를 다루는 숲속의 마녀입니다. 저택의 결계에 이끌려 들어왔습니다.',
+        secretTitle: '🤪 [당신의 진짜 정체: 미치광이]',
+        mission: '※ 당신이 모셔야 할 유령: 🐺 늑대인간(W3611)\n\n[당신의 목표: 유령이 정체를 들키지 않도록 사람들을 선동하고, 자신이 유령인 것처럼 어그로를 끄세요!]\n\n🚨 중요: 이 화면을 캡처해두세요!' },
+      'T5780': { code: 'T5780', charIcon: '✝️', charName: '퇴마사', playerName: '', score: 0,
+        story: '성수와 십자가로 악령을 쫓는 냉철한 인간 퇴마사입니다. 이 저택에 숨어든 유령을 잡기 위해 파티에 잠입했습니다.',
+        secretTitle: '🎃 [당신의 정체: 인간 생존자]' },
+      'K2491': { code: 'K2491', charIcon: '🧟', charName: '강시', playerName: '', score: 0,
+        story: '이마에 부적이 붙은 채 수백 년을 떠돌다 저택에 정착한 슬픈 강시입니다. 겉모습만 무서울 뿐 평화를 사랑합니다.',
+        secretTitle: '📜 [당신의 정체: 인간 생존자 (페이크 몬스터)]' },
+      'B8312': { code: 'B8312', charIcon: '🧛', charName: '뱀파이어', playerName: '', score: 0,
+        story: '붉은 와인을 피로 착각하고 마시는 엉뚱한 뱀파이어 귀족입니다. 파티의 흥을 돋우는 것을 좋아합니다.',
+        secretTitle: '🍷 [당신의 정체: 인간 생존자 (페이크 몬스터)]' },
+      'Z9154': { code: 'Z9154', charIcon: '💀', charName: '좀비', playerName: '', score: 0,
+        story: '지하 감옥에서 갓 탈출해 걸음걸이가 어설픈 좀비입니다. 생존자들과 어울리고 싶어 몬스터 분장을 한 인간입니다.',
+        secretTitle: '⛓️ [당신의 정체: 인간 생존자 (페이크 몬스터)]' },
+      'S4823': { code: 'S4823', charIcon: '⏳', charName: '사신', playerName: '', score: 0,
+        story: '영혼의 무게를 재는 저승의 사신입니다. 하지만 오늘 밤만큼은 임무를 잊고 할로윈을 즐기려 합니다.',
+        secretTitle: '🖤 [당신의 정체: 인간 생존자 (페이크 몬스터)]' }
     };
 
-    let appData = { state: { stageIdx: 0 }, cards: JSON.parse(JSON.stringify(INITIAL_CARDS)) };
-    let activeMobileCode = null;
-    let tvAudioInited = false;
+    let appData = { state: { stageIdx: 0 }, config: { vol: 100, mute: false }, cards: JSON.parse(JSON.stringify(INITIAL_CARDS)), votes: {} };
+    let activeMobileCode = null; let activeVoteCode = null;
+    let ytPlayer = null; let tvAudioInited = false;
+    let currentStageForSound = -1; // 👈 신규 추가: 사운드 중복 재생 방지용 변수
 
-    // Firebase 동기화
-    db.ref('halloween_state_v4').on('value', (snapshot) => {
-      const data = snapshot.val();
-      if (data) appData = data;
-      else db.ref('halloween_state_v4').set(appData);
-      renderAll();
-    });
+    // ----------------------------------------------------
+    // 2. YouTube API 설정
+    // ----------------------------------------------------
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('tvYoutubeBg', {
+        videoId: VID_BGM,
+        playerVars: { 'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': VID_BGM },
+        events: {
+          'onReady': () => { if(tvAudioInited) applyAudioConfig(); }
+        }
+      });
+    }
+    
+    function applyAudioConfig() {
+      if(!ytPlayer || !ytPlayer.setVolume) return;
+      if(appData.config.mute) ytPlayer.mute();
+      else { ytPlayer.unMute(); ytPlayer.setVolume(appData.config.vol); }
+      const btn = document.getElementById('adminMuteBtn');
+      if(btn) { btn.innerText = appData.config.mute ? "소리 켜기" : "음소거"; btn.className = appData.config.mute ? "px-3 py-1 bg-red-600 rounded text-xs text-white" : "px-3 py-1 bg-blue-800 rounded text-xs text-white"; }
+    }
 
-    function syncSave() { db.ref('halloween_state_v4').set(appData); }
-
-    // 시계 업데이트
-    setInterval(() => {
-      const clock = document.getElementById('tvRealtimeClock');
-      if(clock) clock.innerText = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-    }, 1000);
-
-    // TV 오디오 시작 권한 획득
     function initTVAudio() {
-      tvAudioInited = true;
-      document.getElementById('tvStartOverlay').style.display = 'none';
+      tvAudioInited = true; document.getElementById('tvStartOverlay').style.display = 'none';
+      if(ytPlayer && ytPlayer.unMute) { ytPlayer.unMute(); applyAudioConfig(); }
       renderTV();
     }
 
-    // 라우팅
+    // ----------------------------------------------------
+    // 3. 공통 로직 및 동기화
+    // ----------------------------------------------------
+    db.ref('halloween_state_v5').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) { appData = data; if(!appData.votes) appData.votes = {}; } 
+      else db.ref('halloween_state_v5').set(appData);
+      applyAudioConfig(); renderAll();
+    });
+    function syncSave() { db.ref('halloween_state_v5').set(appData); }
+
+    setInterval(() => { const c = document.getElementById('tvRealtimeClock'); if(c) c.innerText = new Date().toLocaleTimeString('ko-KR', {hour12:false}); }, 1000);
+
     window.addEventListener('hashchange', routeView);
     function routeView() {
       const hash = window.location.hash.replace('#', '') || 'tv';
-      if (hash === 'admin' && prompt('🛠️ GM 비밀번호 입력 (261031):') !== ADMIN_PIN) {
-        window.location.hash = 'tv'; return;
-      }
-      ['tv', 'mobile', 'admin'].forEach(v => {
+      if (hash === 'admin' && prompt('🛠️ GM 비밀번호 입력 (261031):') !== ADMIN_PIN) { window.location.hash = 'tv'; return; }
+      ['tv', 'mobile', 'admin', 'vote'].forEach(v => {
         const el = document.getElementById(`view-${v}`);
         if(el) el.classList.toggle('hidden', v !== hash);
       });
       renderAll();
     }
 
-    // 스테이지 컨트롤
-    function prevStage() { if (appData.state.stageIdx > 0) { appData.state.stageIdx--; syncSave(); } }
-    function nextStage() { if (appData.state.stageIdx < STAGES.length - 1) { appData.state.stageIdx++; syncSave(); } }
-    function jumpToStage(idx) { appData.state.stageIdx = idx; syncSave(); }
-
-    // 점수 컨트롤
-    function modifyScore(code, delta) {
-      if(appData.cards[code]) {
-        appData.cards[code].score = Math.max(0, appData.cards[code].score + delta);
-        syncSave();
-      }
+    function getDisplayName(code) {
+      const c = appData.cards[code];
+      if(!c) return '알 수 없음';
+      return c.playerName ? `${c.charName}(${c.playerName})` : c.charName;
     }
 
-    // ==========================================
-    // 📺 TV 렌더링
-    // ==========================================
+    // ----------------------------------------------------
+    // 4. TV 렌더링
+    // ----------------------------------------------------
     function renderTV() {
       const st = STAGES[appData.state.stageIdx] || STAGES[0];
-      const topHeader = document.getElementById('tvTopHeader');
-      const footerBar = document.getElementById('tvFooterBar');
-      const box = document.getElementById('tvStageContainer');
-      const iframe = document.getElementById('tvYoutubeBg');
-
-      // 유튜브 영상 동적 전환
-      if (tvAudioInited && iframe.dataset.vid !== st.vid) {
-        // 배경음악일 때는 소리를 켜고(mute=0), 오프닝은 무음(mute=1)으로 설정할 수 있습니다. 
-        // 여기서는 브라우저 정책상 오프닝부터 소리가 나게 mute=0으로 일괄 설정
-        iframe.src = `https://www.youtube.com/embed/${st.vid}?autoplay=1&mute=0&loop=1&playlist=${st.vid}&controls=0&showinfo=0&rel=0`;
-        iframe.dataset.vid = st.vid;
+      
+      // 영상 교체
+      if (tvAudioInited && ytPlayer && ytPlayer.getVideoData) {
+        const curVid = ytPlayer.getVideoData().video_id;
+        if (curVid && curVid !== st.vid) { ytPlayer.loadVideoById({videoId: st.vid}); }
       }
-
-      // 사운드 이펙트
-      if (tvAudioInited && st.sound === 'bell') {
+      // 종소리 이펙트
+// 종소리 이펙트 (해당 스테이지 진입 시 최초 1회만 실행하여 2번 반복)
+      if (tvAudioInited && st.sound === 'bell' && currentStageForSound !== appData.state.stageIdx) {
+        currentStageForSound = appData.state.stageIdx; // 현재 스테이지 기록
         const bell = document.getElementById('bellSound');
+        bell.volume = appData.config.mute ? 0 : (appData.config.vol / 100);
         bell.currentTime = 0;
-        bell.play().catch(e=>console.log(e));
+        
+        let playCount = 1;
+        bell.onended = function() {
+          if (playCount < 2) {
+            playCount++;
+            bell.currentTime = 0;
+            bell.play().catch(()=>{});
+          } else {
+            bell.onended = null; // 2번 재생 후 이벤트 초기화
+          }
+        };
+        bell.play().catch(()=>{});
       }
 
-      // 헤더/푸터 토글
-      if (st.id === 'STAGE_REST_6PM') {
-        topHeader.classList.add('hidden'); footerBar.classList.add('hidden');
-      } else {
-        topHeader.classList.remove('hidden'); footerBar.classList.remove('hidden');
-        document.getElementById('tvStageTitleText').innerText = st.title;
-      }
+      document.getElementById('tvTopHeader').classList.toggle('hidden', st.id === 'STAGE_REST_6PM');
+      document.getElementById('tvFooterBar').classList.toggle('hidden', st.id === 'STAGE_REST_6PM');
+      document.getElementById('tvStageTitleText').innerText = st.title;
 
-      // 화면 컨텐츠
-      if (st.id === 'STAGE_REST_6PM') {
-        box.innerHTML = '';
-      } 
+      const box = document.getElementById('tvStageContainer');
+      const urlBase = window.location.href.split('#')[0];
+
+      if (st.id === 'STAGE_REST_6PM' || st.id === 'STAGE_VOTE_10PM') { box.innerHTML = ''; }
       else if (st.id === 'STAGE_QR_GUIDE') {
-        const url = window.location.href.split('#')[0] + '#mobile';
-        box.innerHTML = `<div class="text-center bg-black/85 border-2 border-purple-500/60 p-10 rounded-3xl max-w-xl shadow-2xl">
-          <h3 class="text-xl font-black text-white mb-6">스마트폰으로 카메라로 스캔하세요</h3>
-          <div id="qrBox" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
-        setTimeout(() => { const q = document.getElementById('qrBox'); if (q && !q.innerHTML) new QRCode(q, { text: url, width: 200, height: 200 }); }, 100);
+        box.innerHTML = `<div class="text-center bg-black/85 border-2 border-purple-500 p-10 rounded-3xl shadow-2xl"><h3 class="text-xl font-bold text-white mb-6">지령서 수신 QR 코드</h3><div id="qrBox" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
+        setTimeout(() => { const q = document.getElementById('qrBox'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#mobile', width:250, height:250}); }, 100);
       }
-      else if (st.id === 'STAGE_GAME_READY') {
-        box.innerHTML = `<div class="text-center animate-pulse"><h1 class="text-7xl font-black text-red-500 font-gothic drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]">미니게임 시작</h1></div>`;
+      else if (st.id === 'STAGE_VOTE_QR') {
+        box.innerHTML = `<div class="text-center bg-black/90 border-2 border-red-600 p-10 rounded-3xl shadow-2xl"><h3 class="text-2xl font-black text-red-500 mb-6">⚖️ 진실의 제단 (투표 & 보고) 접속</h3><div id="qrVoteBox" class="inline-block bg-white p-3 rounded-xl"></div></div>`;
+        setTimeout(() => { const q = document.getElementById('qrVoteBox'); if(q && !q.innerHTML) new QRCode(q, {text: urlBase+'#vote', width:250, height:250}); }, 100);
       }
-      else if (st.id === 'STAGE_GAME_EXPLAIN') {
-        // assets/posters 에 있는 연습용 이미지 로드
-        box.innerHTML = `<div class="bg-black/90 p-6 rounded-3xl border border-white/20 shadow-2xl flex flex-col items-center">
-          <h2 class="text-2xl font-bold text-yellow-400 mb-4">📢 연습문제 / 룰 설명</h2>
-          <img src="assets/posters/할로윈퀴즈0.png" onerror="this.src='assets/posters/0_도깨비.jpg'" class="max-w-2xl max-h-[50vh] rounded-xl object-contain">
-        </div>`;
+      else if (st.id === 'STAGE_GAME1_READY') {
+        box.innerHTML = `<h1 class="text-7xl font-black text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)] animate-pulse">미니게임 1 준비</h1>`;
       }
-      else if (st.id === 'STAGE_GAME_PLAY') {
+      else if (st.id === 'STAGE_GAME1_EXP') {
+        box.innerHTML = `<div class="bg-black/90 p-6 rounded-3xl border border-white/20 flex flex-col items-center"><h2 class="text-2xl font-bold text-yellow-400 mb-4">📢 연습문제 / 룰 설명</h2><img src="assets/posters/0_도깨비.jpg" class="max-w-2xl max-h-[50vh] rounded-xl object-contain"></div>`;
+      }
+      else if (st.id === 'STAGE_GAME1_PLAY') {
         const players = Object.values(appData.cards).filter(c => c.playerName);
-        const scoreCards = players.map(c => `
-          <div class="bg-gray-900/80 border border-gray-600 rounded-2xl p-4 text-center flex flex-col items-center shadow-lg">
-            <div class="text-4xl mb-2">${c.charIcon}</div>
-            <div class="text-white font-bold text-lg truncate w-full">${c.playerName}</div>
-            <div class="text-4xl font-black text-orange-400 mt-2">${c.score}</div>
-          </div>
-        `).join('');
-        box.innerHTML = `<div class="w-full max-w-5xl"><h2 class="text-3xl font-black text-center text-white mb-8">현재 점수판</h2>
-          <div class="grid grid-cols-3 md:grid-cols-4 gap-4">${scoreCards}</div></div>`;
+        const scoreCards = players.map(c => `<div class="bg-gray-900/90 border border-gray-600 rounded-xl p-3 text-center"><img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="h-16 w-16 mx-auto mb-2 object-cover rounded-full border border-gray-500"><div class="text-2xl">${c.charIcon}</div><div class="text-white font-bold text-sm truncate">${getDisplayName(c.code)}</div><div class="text-3xl font-black text-orange-400 mt-1">${c.score}</div></div>`).join('');
+        box.innerHTML = `<div class="w-full max-w-5xl"><h2 class="text-3xl font-black text-center text-white mb-6">현재 점수판</h2><div class="grid grid-cols-4 gap-4">${scoreCards}</div></div>`;
       }
-      else if (st.id === 'STAGE_GAME_WINNER') {
+      else if (st.id === 'STAGE_GAME1_WIN') {
         const players = Object.values(appData.cards).filter(c => c.playerName);
         const maxScore = Math.max(...players.map(c => c.score), 0);
         const winners = players.filter(c => c.score === maxScore && maxScore > 0);
-        
-        let winnerHTML = `<h2 class="text-4xl font-black text-gray-400">아직 점수를 얻은 플레이어가 없습니다.</h2>`;
-        if(winners.length > 0) {
-          const wCards = winners.map(w => `<div class="bg-yellow-600/30 border-4 border-yellow-400 rounded-3xl p-8 text-center shadow-[0_0_30px_rgba(250,204,21,0.5)]">
-            <div class="text-6xl mb-4">${w.charIcon}</div><div class="text-3xl font-black text-white">${w.playerName}</div>
-            <div class="text-2xl text-yellow-300 mt-2">${w.score}점</div></div>`).join('');
-          wHTML = `<h2 class="text-5xl font-black text-yellow-400 mb-10 drop-shadow-lg">🎉 미니게임 우승자 🎉</h2><div class="flex gap-6 justify-center">${wCards}</div>`;
+        if(winners.length === 0) box.innerHTML = `<h2 class="text-4xl text-gray-400">아무도 점수를 얻지 못했습니다.</h2>`;
+        else {
+          box.innerHTML = `<h2 class="text-5xl font-black text-yellow-400 mb-10 drop-shadow-lg">🎉 미니게임 1 우승자 🎉</h2><div class="flex gap-6 justify-center">` + winners.map(w => `<div class="bg-yellow-600/30 border-4 border-yellow-400 rounded-3xl p-8 text-center shadow-[0_0_30px_rgba(250,204,21,0.5)]"><img src="assets/characters/${w.code}.png" onerror="this.style.display='none'" class="h-24 w-24 mx-auto mb-4 rounded-full border-2 border-yellow-400"><div class="text-4xl mb-2">${w.charIcon}</div><div class="text-2xl font-black text-white">${getDisplayName(w.code)}</div><div class="text-3xl text-yellow-300 mt-2">${w.score}점</div></div>`).join('') + `</div>`;
         }
-        box.innerHTML = `<div class="flex flex-col items-center">${wHTML}</div>`;
       }
-      else {
-        box.innerHTML = `<div class="text-center bg-black/80 border-2 border-orange-500/60 p-10 rounded-3xl max-w-xl mx-auto shadow-2xl"><h2 class="text-3xl font-black text-orange-400">${st.title}</h2></div>`;
+      else if (st.id === 'STAGE_VOTE_RESULT') {
+        // 투표 결과 집계
+        let counts = {}; Object.values(appData.votes).forEach(v => { if(v.target) counts[v.target] = (counts[v.target]||0)+1; });
+        const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+        if(sorted.length === 0) { box.innerHTML = `<h2 class="text-4xl text-gray-400">투표 결과가 없습니다.</h2>`; return; }
+        const maxV = sorted[0][1]; const doomed = sorted.filter(x => x[1] === maxV).map(x => x[0]);
+        box.innerHTML = `<h2 class="text-5xl font-black text-red-500 mb-10 drop-shadow-lg">⛓️ 처형대 최다 득표자</h2><div class="flex gap-6 justify-center">` + doomed.map(code => `<div class="bg-red-900/60 border-4 border-red-600 rounded-3xl p-8 text-center shadow-[0_0_30px_rgba(220,38,38,0.5)]"><img src="assets/characters/${code}.png" onerror="this.style.display='none'" class="h-24 w-24 mx-auto mb-4 rounded-full border-2 border-red-500"><div class="text-5xl mb-2">${appData.cards[code].charIcon}</div><div class="text-3xl font-black text-white">${getDisplayName(code)}</div><div class="text-2xl text-red-300 mt-2">${maxV}표</div></div>`).join('') + `</div>`;
       }
+      else if (st.id === 'STAGE_MISSION_OPEN') {
+        const ghost = appData.cards['W3611'];
+        box.innerHTML = `<div class="bg-black/90 border-4 border-purple-600 rounded-3xl p-10 max-w-3xl text-center shadow-[0_0_50px_rgba(147,51,234,0.8)]"><h2 class="text-5xl font-black text-purple-400 mb-6">진실의 방 오픈</h2><img src="assets/characters/W3611.png" onerror="this.style.display='none'" class="h-40 w-40 mx-auto mb-6 rounded-full border-4 border-purple-500 object-cover"><h3 class="text-3xl text-white mb-2">저택에 숨어든 진짜 유령은...</h3><div class="text-6xl my-6">${ghost.charIcon}</div><h1 class="text-5xl font-black text-red-500">${getDisplayName('W3611')}</h1></div>`;
+      }
+      else { box.innerHTML = `<div class="text-center bg-black/80 border-2 border-orange-500/60 p-10 rounded-3xl max-w-xl mx-auto shadow-2xl"><h2 class="text-3xl font-black text-orange-400">${st.title}</h2></div>`; }
     }
 
-    // ==========================================
-    // 📱 모바일 및 🛠️ 어드민 렌더링
-    // ==========================================
+    // ----------------------------------------------------
+    // 5. 모바일 지령서 렌더링
+    // ----------------------------------------------------
     function loginMobile() {
       const code = document.getElementById('inputCode').value.trim().toUpperCase();
       const name = document.getElementById('inputName').value.trim();
       if (!appData.cards[code]) return alert('올바르지 않은 코드입니다.');
-      appData.cards[code].playerName = name;
-      activeMobileCode = code; syncSave();
+      appData.cards[code].playerName = name; activeMobileCode = code; syncSave();
       document.getElementById('mobileLoginBox').classList.add('hidden');
       document.getElementById('mobileCardContent').classList.remove('hidden');
-      document.getElementById('btnMobileLogout').classList.remove('hidden');
       renderMobileCard();
     }
     
-    function logoutMobile() {
-      activeMobileCode = null;
-      document.getElementById('mobileLoginBox').classList.remove('hidden');
-      document.getElementById('mobileCardContent').classList.add('hidden');
-      document.getElementById('btnMobileLogout').classList.add('hidden');
-    }
-    
     function renderMobileCard() {
-      if (!activeMobileCode) return;
-      const c = appData.cards[activeMobileCode];
+      if (!activeMobileCode) return; const c = appData.cards[activeMobileCode];
       document.getElementById('mobileCardContent').innerHTML = `
-        <div class="bg-purple-950 p-5 rounded-2xl text-white text-center space-y-2 border border-purple-500/50">
-          <div class="text-5xl mb-2">${c.charIcon}</div>
-          <div class="text-xl font-black">${c.playerName} (${c.charName})</div>
-          <div class="text-sm text-orange-300 font-bold bg-black/40 py-2 rounded-lg mt-3">${c.secretTitle}</div>
-          <div class="text-lg text-white font-bold mt-4">현재 점수: <span class="text-yellow-400">${c.score}</span>점</div>
+        <div class="bg-purple-950/80 p-5 rounded-2xl text-white text-center border border-purple-500/50 shadow-xl">
+          <img src="assets/characters/${c.code}.png" onerror="this.style.display='none'" class="w-24 h-24 mx-auto rounded-full mb-3 object-cover border-2 border-purple-400">
+          <div class="text-4xl mb-2">${c.charIcon}</div>
+          <div class="text-xl font-black">${getDisplayName(c.code)}</div>
+          <div class="text-xs text-gray-300 mt-2 px-2">${c.story}</div>
+          <div class="mt-4 p-3 bg-black/60 rounded-xl border border-red-500/50">
+            <div class="${c.isGhost||c.code==='M7420' ? 'text-xl text-red-400' : 'text-sm text-orange-300'} font-black animate-pulse">${c.secretTitle}</div>
+            ${c.mission ? `<div class="mt-3 text-xs text-left bg-red-950/40 p-3 rounded border border-red-500/30 text-red-200 whitespace-pre-wrap">${c.mission}</div>` : ''}
+          </div>
         </div>`;
     }
 
-    function renderAdminRemote() {
-      const st = STAGES[appData.state.stageIdx] || STAGES[0];
-      const lbl = document.getElementById('remoteCurrentStageLabel');
-      if(lbl) lbl.innerText = `현재 화면: ${st.title}`;
-      
-      const listEl = document.getElementById('remoteStageList');
-      if(listEl) {
-        listEl.innerHTML = STAGES.map((s, idx) => `
-          <button onclick="jumpToStage(${idx})" class="p-2.5 rounded-xl border text-left transition ${idx === appData.state.stageIdx ? 'bg-orange-600 border-orange-400 text-white font-black' : 'bg-gray-900 border-gray-800 text-gray-400'}">
-            <div class="truncate text-[11px]">${s.title}</div>
-          </button>
-        `).join('');
-      }
+    // ----------------------------------------------------
+    // 6. 모바일 투표 렌더링
+    // ----------------------------------------------------
+    function loginVote() {
+      const code = document.getElementById('voteInputCode').value.trim().toUpperCase();
+      if (!appData.cards[code]) return alert('올바르지 않은 코드입니다.');
+      activeVoteCode = code;
+      document.getElementById('voteLoginBox').classList.add('hidden');
+      document.getElementById('voteFormContent').classList.remove('hidden');
+      renderVoteForm();
+    }
 
-      // 점수판 렌더링
-      const scoreBoard = document.getElementById('adminScoreBoard');
-      if(scoreBoard) {
-        scoreBoard.innerHTML = Object.values(appData.cards).map(c => `
-          <div class="flex items-center justify-between bg-gray-800 rounded-lg p-2 text-xs text-white">
-            <div class="flex items-center gap-2 truncate w-24">
-              <span>${c.charIcon}</span><span class="font-bold truncate">${c.playerName || '미접속'}</span>
-            </div>
-            <div class="font-black text-yellow-400 w-6 text-center">${c.score}</div>
-            <div class="flex gap-1">
-              <button onclick="modifyScore('${c.code}', -1)" class="bg-red-700 px-2.5 py-1 rounded">-1</button>
-              <button onclick="modifyScore('${c.code}', 1)" class="bg-blue-600 px-2.5 py-1 rounded">+1</button>
-            </div>
-          </div>
-        `).join('');
+    function renderVoteForm() {
+      const code = activeVoteCode; const c = appData.cards[code];
+      const formEl = document.getElementById('voteFormContent');
+      if (c.isGhost) {
+        formEl.innerHTML = `<h3 class="text-lg font-bold text-red-400">👻 유령 미션 보고서</h3>
+          <textarea id="ghostMissionInput" class="w-full h-32 bg-gray-900 border border-red-700 rounded p-3 text-sm text-white" placeholder="미션을 어떻게 성공(혹은 실패)했는지 상세히 적어주세요!"></textarea>
+          <button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded mt-3">보고서 제출</button>`;
+      } else {
+        const opts = Object.values(appData.cards).filter(x => x.code !== code && x.playerName).map(x => `<option value="${x.code}">${getDisplayName(x.code)}</option>`).join('');
+        formEl.innerHTML = `<h3 class="text-lg font-bold text-red-400">누가 유령일까요?</h3>
+          <select id="voteTarget" class="w-full bg-gray-900 border border-red-700 rounded p-3 text-white"><option value="">-- 의심되는 사람 선택 --</option>${opts}</select>
+          <textarea id="voteReason" class="w-full h-24 bg-gray-900 border border-red-700 rounded p-3 text-sm text-white mt-3" placeholder="의심하는 이유를 적어주세요."></textarea>
+          <button onclick="submitVote()" class="w-full py-3 bg-red-700 text-white font-black rounded mt-3">투표 제출</button>`;
       }
     }
 
-    function seedAllDemoPlayers() {
-      const demoNames = ['철수', '영희', '민수', '지은', '동현', '서연', '현우'];
-      Object.keys(appData.cards).forEach((k, idx) => { appData.cards[k].playerName = demoNames[idx]; });
-      syncSave(); alert('테스트 7명 등록 완료!');
+    function submitVote() {
+      const code = activeVoteCode; const c = appData.cards[code];
+      if (c.isGhost) {
+        const val = document.getElementById('ghostMissionInput').value;
+        appData.votes[code] = { isGhostReport: true, missionText: val };
+      } else {
+        const target = document.getElementById('voteTarget').value;
+        const reason = document.getElementById('voteReason').value;
+        if(!target) return alert('대상을 선택하세요!');
+        appData.votes[code] = { target, reason };
+      }
+      syncSave(); alert('제출 완료!');
+      document.getElementById('voteFormContent').innerHTML = `<div class="text-center text-gray-400 py-10">제출이 완료되었습니다. 화면을 주시하세요.</div>`;
+    }
+
+    // ----------------------------------------------------
+    // 7. 어드민 컨트롤 렌더링
+    // ----------------------------------------------------
+    function changeVolume(val) { appData.config.vol = val; syncSave(); }
+    function toggleMute() { appData.config.mute = !appData.config.mute; syncSave(); }
+    function prevStage() { if (appData.state.stageIdx > 0) { appData.state.stageIdx--; syncSave(); } }
+    function nextStage() { if (appData.state.stageIdx < STAGES.length - 1) { appData.state.stageIdx++; syncSave(); } }
+    function jumpToStage(idx) { appData.state.stageIdx = idx; syncSave(); }
+    function modifyScore(code, d) { if(appData.cards[code]) { appData.cards[code].score = Math.max(0, appData.cards[code].score + d); syncSave(); } }
+    function resetScores() { Object.keys(appData.cards).forEach(k => appData.cards[k].score = 0); syncSave(); }
+    
+    function hardResetPlayers() {
+      if(prompt('정말 모든 데이터를 초기화합니까? 비밀번호 입력:') !== ADMIN_PIN) return alert('취소되었습니다.');
+      appData.cards = JSON.parse(JSON.stringify(INITIAL_CARDS));
+      appData.votes = {}; appData.state.stageIdx = 0; syncSave(); alert('초기화 완료');
+    }
+    function updatePlayerName(code, newName) { appData.cards[code].playerName = newName; syncSave(); }
+
+    function renderAdminRemote() {
+      const st = STAGES[appData.state.stageIdx] || STAGES[0];
+      const lbl = document.getElementById('remoteCurrentStageLabel'); if(lbl) lbl.innerText = st.title;
+      document.getElementById('adminVol').value = appData.config.vol;
+      
+      const listEl = document.getElementById('remoteStageList');
+      if(listEl) listEl.innerHTML = STAGES.map((s, i) => `<button onclick="jumpToStage(${i})" class="p-2 rounded border text-left truncate ${i === appData.state.stageIdx ? 'bg-orange-600 border-orange-400 text-white font-bold' : 'bg-gray-900 border-gray-800 text-gray-400'}">${s.title}</button>`).join('');
+
+      const scoreBoard = document.getElementById('adminScoreBoard');
+      if(scoreBoard) scoreBoard.innerHTML = Object.values(appData.cards).map(c => `
+        <div class="flex items-center justify-between bg-gray-800 rounded px-2 py-1 text-xs text-white">
+          <div class="truncate w-24">${c.charIcon} ${getDisplayName(c.code)}</div>
+          <div class="font-black text-yellow-400 w-6 text-center">${c.score}</div>
+          <div class="flex gap-1"><button onclick="modifyScore('${c.code}', -1)" class="bg-red-700 px-2 py-1 rounded">-1</button><button onclick="modifyScore('${c.code}', 1)" class="bg-blue-600 px-2 py-1 rounded">+1</button></div>
+        </div>`).join('');
+
+      const pMgmt = document.getElementById('adminPlayerMgmt');
+      if(pMgmt) pMgmt.innerHTML = Object.values(appData.cards).map(c => `
+        <div class="flex items-center gap-2 bg-gray-900 rounded p-1.5 border border-gray-700">
+          <span class="w-12 truncate text-gray-400">${c.charIcon} ${c.charName}</span>
+          <input type="text" value="${c.playerName}" onchange="updatePlayerName('${c.code}', this.value)" placeholder="미등록" class="flex-1 bg-black border border-gray-600 text-white px-1 py-0.5 rounded">
+        </div>`).join('');
     }
 
     function renderAll() {
@@ -381,6 +446,7 @@
       if (hash === 'tv') renderTV();
       if (hash === 'admin') renderAdminRemote();
       if (hash === 'mobile' && activeMobileCode) renderMobileCard();
+      if (hash === 'vote' && activeVoteCode) renderVoteForm();
     }
 
     if (!window.location.hash) window.location.hash = 'tv'; else routeView();
